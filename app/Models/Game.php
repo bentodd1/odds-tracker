@@ -19,11 +19,9 @@ class Game extends Model
         'completed'
     ];
 
-    protected $dates = [
-        'commence_time'
-    ];
 
     protected $casts = [
+        'commence_time' => 'datetime',
         'completed' => 'boolean'
     ];
 
