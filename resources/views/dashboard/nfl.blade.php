@@ -31,87 +31,6 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Spreads -->
-                <div>
-                    <h3 class="font-semibold mb-3">Spreads</h3>
-                    @php
-                        $bestHomeSpreadOdds = $game->spreads->min('cover_probability_with_juice');
-                        $bestAwaySpreadOdds = $game->spreads->min(function($spread) {
-                            return 100 - $spread->cover_probability_with_juice;
-                        });
-                    @endphp
-                    @foreach($game->spreads->groupBy('casino_id') as $casinoSpreads)
-                        @php $spread = $casinoSpreads->sortByDesc('recorded_at')->first(); @endphp
-                        <div class="mb-4">
-                            <div class="flex justify-between">
-                                <span>{{ strtolower($spread->casino->name) }}</span>
-                                <span class="text-gray-600 text-sm">
-                                        Updated: {{ $spread->recorded_at instanceof \Carbon\Carbon ? $spread->recorded_at->diffForHumans() : 'Unknown' }}
-                                    </span>
-                            </div>
-                            <div>
-                                <div @class([
-                                        'p-2 rounded',
-                                        'bg-green-100' => $spread->cover_probability_with_juice == $bestHomeSpreadOdds
-                                    ])>
-                                    {{ $game->homeTeam->name }} {{ $spread->spread > 0 ? '+' : '' }}{{ $spread->spread }} ({{ number_format($spread->cover_probability_with_juice, 1) }}%)
-                                    @if($spread->is_key_number)
-                                        <span class="text-blue-600 text-xs">Key</span>
-                                    @endif
-                                    <br>
-                                    Odds: {{ $spread->home_odds }}
-                                </div>
-                                <div @class([
-                                        'p-2 rounded mt-1',
-                                        'bg-green-100' => (100 - $spread->cover_probability_with_juice) == $bestAwaySpreadOdds
-                                    ])>
-                                    {{ $game->awayTeam->name }} {{ -$spread->spread > 0 ? '+' : '' }}{{ -$spread->spread }} ({{ number_format(100 - $spread->cover_probability_with_juice, 1) }}%)
-                                    <br>
-                                    Odds: {{ $spread->away_odds }}
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-
-                <!-- Money Lines -->
-                <div>
-                    <h3 class="font-semibold mb-3">Money Lines</h3>
-                    @php
-                        $bestHomeMoneyLineOdds = $game->moneyLines->min('home_implied_probability');
-                        $bestAwayMoneyLineOdds = $game->moneyLines->min('away_implied_probability');
-                    @endphp
-                    @foreach($game->moneyLines->groupBy('casino_id') as $casinoMoneyLines)
-                        @php $moneyLine = $casinoMoneyLines->sortByDesc('recorded_at')->first(); @endphp
-                        <div class="mb-4">
-                            <div class="flex justify-between">
-                                <span>{{ strtolower($moneyLine->casino->name) }}</span>
-                                <span class="text-gray-600 text-sm">
-                                        Updated: {{ $moneyLine->recorded_at instanceof \Carbon\Carbon ? $moneyLine->recorded_at->diffForHumans() : 'Unknown' }}
-                                    </span>
-                            </div>
-                            <div>
-                                <div @class([
-                                        'p-2 rounded',
-                                        'bg-green-100' => $moneyLine->home_implied_probability == $bestHomeMoneyLineOdds
-                                    ])>
-                                    {{ $game->homeTeam->name }}
-                                    <br>
-                                    Odds: {{ $moneyLine->home_odds }} ({{ number_format($moneyLine->home_implied_probability, 1) }}%)
-                                </div>
-                                <div @class([
-                                        'p-2 rounded mt-1',
-                                        'bg-green-100' => $moneyLine->away_implied_probability == $bestAwayMoneyLineOdds
-                                    ])>
-                                    {{ $game->awayTeam->name }}
-                                    <br>
-                                    Odds: {{ $moneyLine->away_odds }} ({{ number_format($moneyLine->away_implied_probability, 1) }}%)
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-
                 <!-- FPI Analysis -->
                 <div>
                     <h3 class="font-semibold mb-3">FPI Analysis</h3>
@@ -158,6 +77,128 @@
                     @else
                         <div class="text-gray-500">FPI data not available</div>
                     @endif
+                </div>
+
+                <!-- Spreads -->
+                <div>
+                    <h3 class="font-semibold mb-3">Spreads</h3>
+                    @php
+                        // Collect all probabilities for each team
+                        $homeTeamProbs = collect();
+                        $awayTeamProbs = collect();
+
+                        // Add spread probabilities
+                        foreach($game->spreads as $spread) {
+                            if($spread->spread < 0) {
+                                $homeTeamProbs->push([
+                                    'type' => 'spread',
+                                    'casino' => $spread->casino->name,
+                                    'probability' => $spread->cover_probability_with_juice
+                                ]);
+                            } else {
+                                $awayTeamProbs->push([
+                                    'type' => 'spread',
+                                    'casino' => $spread->casino->name,
+                                    'probability' => $spread->cover_probability_with_juice
+                                ]);
+                            }
+                        }
+
+                        // Add moneyline probabilities
+                        foreach($game->moneyLines as $moneyLine) {
+                            $homeTeamProbs->push([
+                                'type' => 'moneyline',
+                                'casino' => $moneyLine->casino->name,
+                                'probability' => $moneyLine->home_implied_probability
+                            ]);
+                            $awayTeamProbs->push([
+                                'type' => 'moneyline',
+                                'casino' => $moneyLine->casino->name,
+                                'probability' => $moneyLine->away_implied_probability
+                            ]);
+                        }
+
+                        // Find lowest probability for each team
+                        $bestHomeOdds = $homeTeamProbs->sortBy('probability')->first();
+                        $bestAwayOdds = $awayTeamProbs->sortBy('probability')->first();
+                    @endphp
+
+                    @foreach($game->spreads->groupBy('casino_id') as $casinoSpreads)
+                        @php $spread = $casinoSpreads->sortByDesc('recorded_at')->first(); @endphp
+                        <div class="mb-4">
+                            <div class="flex justify-between">
+                                <span>{{ strtolower($spread->casino->name) }}</span>
+                                <span class="text-gray-600 text-sm">
+                                        Updated: {{ $spread->recorded_at instanceof \Carbon\Carbon ? $spread->recorded_at->diffForHumans() : 'Unknown' }}
+                                    </span>
+                            </div>
+                            <div>
+                                <div @class([
+                                        'p-2 rounded',
+                                        'bg-green-100' => $spread->spread < 0 &&
+                                                        $bestHomeOdds['type'] === 'spread' &&
+                                                        $bestHomeOdds['casino'] === $spread->casino->name
+                                    ])>
+                                    {{ $game->homeTeam->name }} {{ $spread->spread > 0 ? '+' : '' }}{{ $spread->spread }} ({{ number_format($spread->cover_probability_with_juice, 1) }}%)
+                                    @if($spread->is_key_number)
+                                        <span class="text-blue-600 text-xs">Key</span>
+                                    @endif
+                                    <br>
+                                    Odds: {{ $spread->home_odds }}
+                                </div>
+                                <div @class([
+                                        'p-2 rounded mt-1',
+                                        'bg-green-100' => $spread->spread > 0 &&
+                                                        $bestAwayOdds['type'] === 'spread' &&
+                                                        $bestAwayOdds['casino'] === $spread->casino->name
+                                    ])>
+                                    {{ $game->awayTeam->name }} {{ -$spread->spread > 0 ? '+' : '' }}{{ -$spread->spread }} ({{ number_format(100 - $spread->cover_probability_with_juice, 1) }}%)
+                                    <br>
+                                    Odds: {{ $spread->away_odds }}
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <!-- Money Lines -->
+                <div>
+                    <h3 class="font-semibold mb-3">Money Lines</h3>
+                    @php
+                        $bestHomeMoneyLineOdds = $game->moneyLines->min('home_implied_probability');
+                        $bestAwayMoneyLineOdds = $game->moneyLines->min('away_implied_probability');
+                    @endphp
+                    @foreach($game->moneyLines->groupBy('casino_id') as $casinoMoneyLines)
+                        @php $moneyLine = $casinoMoneyLines->sortByDesc('recorded_at')->first(); @endphp
+                        <div class="mb-4">
+                            <div class="flex justify-between">
+                                <span>{{ strtolower($moneyLine->casino->name) }}</span>
+                                <span class="text-gray-600 text-sm">
+                                        Updated: {{ $moneyLine->recorded_at instanceof \Carbon\Carbon ? $moneyLine->recorded_at->diffForHumans() : 'Unknown' }}
+                                    </span>
+                            </div>
+                            <div>
+                                <div @class([
+                                        'p-2 rounded',
+                                        'bg-green-100' => $bestHomeOdds['type'] === 'moneyline' &&
+                                                        $bestHomeOdds['casino'] === $moneyLine->casino->name
+                                    ])>
+                                    {{ $game->homeTeam->name }}
+                                    <br>
+                                    Odds: {{ $moneyLine->home_odds }} ({{ number_format($moneyLine->home_implied_probability, 1) }}%)
+                                </div>
+                                <div @class([
+                                        'p-2 rounded mt-1',
+                                        'bg-green-100' => $bestAwayOdds['type'] === 'moneyline' &&
+                                                        $bestAwayOdds['casino'] === $moneyLine->casino->name
+                                    ])>
+                                    {{ $game->awayTeam->name }}
+                                    <br>
+                                    Odds: {{ $moneyLine->away_odds }} ({{ number_format($moneyLine->away_implied_probability, 1) }}%)
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         </div>
