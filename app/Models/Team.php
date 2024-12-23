@@ -25,4 +25,15 @@ class Team extends Model
     {
         return $this->hasMany(Game::class, 'away_team_id');
     }
+
+    public function latestFpi()
+    {
+        return $this->hasOne(FpiRating::class)
+            ->where('revision', function($query) {
+                $query->select('revision')
+                    ->from('fpi_ratings')
+                    ->orderByDesc('revision')
+                    ->limit(1);
+            });
+    }
 }

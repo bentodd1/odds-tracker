@@ -19,7 +19,7 @@
                 </span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Spreads -->
                 <div>
                     <h3 class="font-semibold mb-3">Spreads</h3>
@@ -78,7 +78,69 @@
                         </div>
                     @endforeach
                 </div>
+
+                <!-- FPI Analysis -->
+                <div>
+                    <h3 class="font-semibold mb-3">FPI Analysis</h3>
+                    @php
+                        $homeTeamFpi = $game->homeTeam->latestFpi()->first();
+                        $awayTeamFpi = $game->awayTeam->latestFpi()->first();
+
+                        if ($homeTeamFpi && $awayTeamFpi) {
+                            $fpiDiff = $homeTeamFpi->rating - $awayTeamFpi->rating + 2; // Add home field advantage
+                            $spread = -$fpiDiff; // Convert to betting spread format
+
+                            // Create temporary spread object to use existing probability calculation
+                            $tempSpread = new \App\Models\Spread([
+                                'spread' => $spread
+                            ]);
+
+                            $probability = $tempSpread->getCoverProbabilityAttribute();
+                        }
+                    @endphp
+
+                    @if(isset($probability))
+                        <div class="mb-4">
+                            <div class="mb-2 text-sm text-gray-600">
+                                Projected Spread & Win Probability
+                            </div>
+                            <div>
+                                <div class="mb-2">
+                                    <span class="font-medium">{{ $game->homeTeam->name }}</span>
+                                    <br>
+                                    Spread: {{ $fpiDiff > 0 ? '-' : '+' }}{{ number_format(abs($fpiDiff), 1) }}
+                                    <br>
+                                    Win: {{ number_format($probability, 1) }}%
+                                    <br>
+                                    FPI: {{ number_format($homeTeamFpi->rating, 1) }}
+                                </div>
+                                <div>
+                                    <span class="font-medium">{{ $game->awayTeam->name }}</span>
+                                    <br>
+                                    Spread: {{ -$fpiDiff > 0 ? '+' : '-' }}{{ number_format(abs($fpiDiff), 1) }}
+                                    <br>
+                                    Win: {{ number_format(100 - $probability, 1) }}%
+                                    <br>
+                                    FPI: {{ number_format($awayTeamFpi->rating, 1) }}
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="text-gray-500">FPI data not available</div>
+                    @endif
+                </div>
             </div>
+
+            <!-- Historical Matchup Data (if available) -->
+            @if(isset($game->matchupStats))
+                <div class="mt-6 pt-4 border-t">
+                    <h3 class="font-semibold mb-3">Historical Matchup Stats</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Add historical data here -->
+                    </div>
+                </div>
+            @endif
+
         </div>
     @endforeach
 </div>
