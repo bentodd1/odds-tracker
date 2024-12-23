@@ -10,7 +10,6 @@ use App\Models\Team;
 use App\Models\Spread;
 use App\Models\Casino;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class FetchHistoricalSpreads extends Command
 {

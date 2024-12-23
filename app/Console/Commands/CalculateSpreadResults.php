@@ -9,38 +9,19 @@ use Illuminate\Support\Facades\DB;
 
 class CalculateSpreadResults extends Command
 {
-    protected $signature = 'spreads:calculate-results {--debug : Show debug information}';
+    protected $signature = 'spreads:calculate-results
+        {--debug : Show debug information}
+        {--sport= : Filter by sport key (e.g. nba, nfl, mlb)}
+        {--casino= : Filter by casino name}';
+
     protected $description = 'Calculate results for all spreads that have final scores';
 
     public function handle()
     {
         $processedCount = 0;
-        $chunkSize = 100; // Process 100 spreads at a time
+        $chunkSize = 100;
 
-        // Get total count for progress bar
-        $totalSpreads = Spread::query()
-            ->join('games', 'spreads.game_id', '=', 'games.id')
-            ->whereExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('scores')
-                    ->whereColumn('scores.game_id', 'games.id')
-                    ->where('scores.period', 'F');
-            })
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('spread_results')
-                    ->whereColumn('spread_results.spread_id', 'spreads.id');
-            })
-            ->count();
-
-        if ($this->option('debug')) {
-            $this->info("Found {$totalSpreads} spreads to process");
-        }
-
-        $bar = $this->output->createProgressBar($totalSpreads);
-        $bar->start();
-
-        Spread::query()
+        $query = Spread::query()
             ->select('spreads.*')
             ->join('games', 'spreads.game_id', '=', 'games.id')
             ->whereExists(function ($query) {
@@ -53,11 +34,44 @@ class CalculateSpreadResults extends Command
                 $query->select(DB::raw(1))
                     ->from('spread_results')
                     ->whereColumn('spread_results.spread_id', 'spreads.id');
-            })
-            ->with(['game.scores' => function($query) {
-                $query->where('period', 'F');
-            }])
-            ->chunk($chunkSize, function ($spreads) use (&$processedCount, $bar, $chunkSize) {  // Added $chunkSize here
+            });
+
+        // Apply sport filter if provided
+        if ($sportKey = $this->option('sport')) {
+            $query->whereHas('game', function ($q) use ($sportKey) {
+                $q->whereHas('sport', function ($sq) use ($sportKey) {
+                    $sq->where('key', $sportKey);
+                });
+            });
+        }
+
+        // Apply casino filter if provided
+        if ($casinoName = $this->option('casino')) {
+            $query->whereHas('casino', function ($q) use ($casinoName) {
+                $q->where('name', 'like', "%{$casinoName}%");
+            });
+        }
+
+        // Get total count for progress bar
+        $totalSpreads = $query->count();
+
+        if ($this->option('debug')) {
+            $this->info("Found {$totalSpreads} spreads to process");
+            if ($sportKey) {
+                $this->info("Filtering by sport: {$sportKey}");
+            }
+            if ($casinoName) {
+                $this->info("Filtering by casino: {$casinoName}");
+            }
+        }
+
+        $bar = $this->output->createProgressBar($totalSpreads);
+        $bar->start();
+
+        $query->with(['game.scores' => function($query) {
+            $query->where('period', 'F');
+        }])
+            ->chunk($chunkSize, function ($spreads) use (&$processedCount, $bar, $chunkSize) {
                 foreach ($spreads as $spread) {
                     try {
                         $score = $spread->game->scores->first();
@@ -79,7 +93,8 @@ class CalculateSpreadResults extends Command
                             $this->info("Processed spread {$spread->id}: " .
                                 "{$spread->game->homeTeam->name} ({$score->home_score}) vs " .
                                 "{$spread->game->awayTeam->name} ({$score->away_score}), " .
-                                "Spread: {$spread->spread}");
+                                "Spread: {$spread->spread}" .
+                                " [{$spread->casino->name}]");
                         }
 
                     } catch (\Exception $e) {
