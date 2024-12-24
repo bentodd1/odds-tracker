@@ -58,4 +58,10 @@ class DashboardController extends Controller
         $games = $this->getFilteredGames('nhl');
         return view('dashboard.nhl', compact('games'));
     }
+
+    public function ncaaf()
+    {
+        $games = $this->getFilteredGames('nba');
+        return view('dashboard.ncaaf', compact('games'));
+    }
 }

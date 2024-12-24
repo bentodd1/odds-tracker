@@ -1,3 +1,4 @@
+<!-- resources/views/home.blade.php -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,20 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
-<!-- Navigation -->
-<nav class="bg-white shadow-sm">
-    <div class="container mx-auto px-4 py-4">
-        <div class="flex justify-between items-center">
-            <div class="text-xl font-bold text-blue-600">Smart Betting Analytics</div>
-            <div class="space-x-4">
-                <a href="{{ route('dashboard.nfl') }}" class="text-gray-600 hover:text-blue-600">NFL</a>
-                <a href="{{ route('dashboard.nba') }}" class="text-gray-600 hover:text-blue-600">NBA</a>
-                <a href="{{ route('dashboard.mlb') }}" class="text-gray-600 hover:text-blue-600">MLB</a>
-                <a href="{{ route('dashboard.nhl') }}" class="text-gray-600 hover:text-blue-600">NHL</a>
-            </div>
-        </div>
-    </div>
-</nav>
+<x-navigation :currentPage="null" />
 
 <!-- Hero Section -->
 <div class="bg-white">
@@ -49,9 +37,9 @@
                 <p class="text-gray-600 mb-4">Betting lines can be confusing. What does -110 really mean? What about -14.5 with -105? We translate these numbers into clear probabilities so you know exactly what the sportsbook thinks will happen.</p>
                 <p class="text-gray-600">For example, when you see:</p>
                 <ul class="list-disc list-inside text-gray-600 mt-2 space-y-2">
-                    <li>Spread: -14.5 (-110)</li>
-                    <li>Money Line: -950</li>
-                    <li>We show: 86.7% implied probability</li>
+                    <li>Spread: -14.5 (-110) → We show: 86.7% win probability (based on spread size)</li>
+                    <li>Money Line: -950 → We show: 90.5% probability</li>
+                    <li>Here, the spread is clearly better value.</li>
                 </ul>
             </div>
 
