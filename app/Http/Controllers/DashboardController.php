@@ -30,7 +30,7 @@ class DashboardController extends Controller
             ->where('sports.title', $sportTitle)
             ->where('commence_time', '>', Carbon::now())
             ->orderBy('commence_time', 'asc')
-            ->take(10)
+            ->take(30)
             ->select('games.*')  // This ensures we only get games columns
             ->get();
     }
@@ -61,7 +61,7 @@ class DashboardController extends Controller
 
     public function ncaaf()
     {
-        $games = $this->getFilteredGames('nba');
+        $games = $this->getFilteredGames('ncaaf');
         return view('dashboard.ncaaf', compact('games'));
     }
 }

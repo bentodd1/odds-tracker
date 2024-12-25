@@ -29,11 +29,11 @@ class Team extends Model
     public function latestFpi()
     {
         return $this->hasOne(FpiRating::class)
-            ->where('revision', function($query) {
-                $query->select('revision')
+            ->orderByDesc('revision')
+            ->whereIn('id', function($query) {
+                $query->select(\DB::raw('MIN(id)'))
                     ->from('fpi_ratings')
-                    ->orderByDesc('revision')
-                    ->limit(1);
+                    ->groupBy('team_id');
             });
     }
 }
