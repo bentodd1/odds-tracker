@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class NFLMargin extends Model
+class NflMargin extends Model
 {
     protected $fillable = ['margin', 'occurrences', 'cumulative_percentage', 'is_key_number'];
 

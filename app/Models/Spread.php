@@ -143,7 +143,7 @@ class Spread extends Model
     public function getSpreadProbabilityAttribute()
     {
         $isHalf = (floor($this->spread) != $this->spread);
-        return NFLMargin::calculateSpreadProbability(
+        return NflMargin::calculateSpreadProbability(
             $this->spread,
             $isHalf
         );
@@ -155,7 +155,7 @@ class Spread extends Model
             return false;
         }
 
-        return NFLMargin::where('margin', abs($this->spread))
+        return NflMargin::where('margin', abs($this->spread))
             ->where('is_key_number', true)
             ->exists();
     }
