@@ -31,20 +31,29 @@ class GameTransformationService
         $casinoData = $this->transformCasinoData($game);
         $bestValues = $this->calculateBestValues($casinoData);
 
+        $commenceTime = $game->commence_time->subHours(6);
+
+
         return [
             'id' => $game->id,
-            'commence_time' => $game->commence_time,
+            'commence_time' =>$commenceTime,
             'home_team' => [
                 'name' => $game->homeTeam->name,
                 'fpi' => $fpiData['home_fpi'],
                 'win_probability' => $fpiData['home_win_probability'],
-                'best_value_casinos' => $bestValues['home']
+                'best_value' => [     // Added this structure
+                    'casino' => $bestValues['home']['casino'],
+                    'type' => $bestValues['home']['type']
+                ]
             ],
             'away_team' => [
                 'name' => $game->awayTeam->name,
                 'fpi' => $fpiData['away_fpi'],
                 'win_probability' => $fpiData['away_win_probability'],
-                'best_value_casinos' => $bestValues['away']
+                'best_value' => [     // Added this structure
+                    'casino' => $bestValues['away']['casino'],
+                    'type' => $bestValues['away']['type']
+                ]
             ],
             'casinos' => $casinoData
         ];
@@ -142,27 +151,52 @@ class GameTransformationService
      */
     private function calculateBestValues($casinoData)
     {
-        $lowestHomeProbs = [];
-        $lowestAwayProbs = [];
+        $lowestHomeProb = 100;
+        $lowestAwayProb = 100;
+        $bestHomeBook = null;
+        $bestHomeBetType = null;
+        $bestAwayBook = null;
+        $bestAwayBetType = null;
 
         foreach ($casinoData as $casinoName => $data) {
-            // For home team
+            // Check home team probabilities
             $homeSpreadProb = $data['spread']['home']['probability'];
-            $homeMLProb = isset($data['moneyLine']) ? $data['moneyLine']['home']['probability'] : 100;
-            $lowestHomeProbs[$casinoName] = min($homeSpreadProb, $homeMLProb);
+            if ($homeSpreadProb < $lowestHomeProb) {
+                $lowestHomeProb = $homeSpreadProb;
+                $bestHomeBook = $casinoName;
+                $bestHomeBetType = 'spread';
+            }
 
-            // For away team
+            if (isset($data['moneyLine']) && $data['moneyLine']['home']['probability'] < $lowestHomeProb) {
+                $lowestHomeProb = $data['moneyLine']['home']['probability'];
+                $bestHomeBook = $casinoName;
+                $bestHomeBetType = 'moneyline';
+            }
+
+            // Check away team probabilities
             $awaySpreadProb = $data['spread']['away']['probability'];
-            $awayMLProb = isset($data['moneyLine']) ? $data['moneyLine']['away']['probability'] : 100;
-            $lowestAwayProbs[$casinoName] = min($awaySpreadProb, $awayMLProb);
+            if ($awaySpreadProb < $lowestAwayProb) {
+                $lowestAwayProb = $awaySpreadProb;
+                $bestAwayBook = $casinoName;
+                $bestAwayBetType = 'spread';
+            }
+
+            if (isset($data['moneyLine']) && $data['moneyLine']['away']['probability'] < $lowestAwayProb) {
+                $lowestAwayProb = $data['moneyLine']['away']['probability'];
+                $bestAwayBook = $casinoName;
+                $bestAwayBetType = 'moneyline';
+            }
         }
 
-        $minHomeProb = min($lowestHomeProbs);
-        $minAwayProb = min($lowestAwayProbs);
-
         return [
-            'home' => array_keys($lowestHomeProbs, $minHomeProb),
-            'away' => array_keys($lowestAwayProbs, $minAwayProb)
+            'home' => [
+                'casino' => $bestHomeBook,
+                'type' => $bestHomeBetType
+            ],
+            'away' => [
+                'casino' => $bestAwayBook,
+                'type' => $bestAwayBetType
+            ]
         ];
     }
 }

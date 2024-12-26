@@ -62,23 +62,21 @@
                     @foreach($game['casinos'] as $casinoName => $casinoData)
                         <td class="p-2">
                             <div class="flex text-sm">
-                                <div class="flex-1 text-center {{ in_array($casinoName, $game['away_team']['best_value_casinos']) ? 'bg-green-100 rounded p-1' : '' }}">
-                                    <div>
-                                        {{ $casinoData['spread']['away']['line'] > 0 ? '+' : '' }}{{ $casinoData['spread']['away']['line'] }}
-                                    </div>
+                                <div class="flex-1 text-center {{
+                                            $game['away_team']['best_value']['casino'] === $casinoName &&
+                                            $game['away_team']['best_value']['type'] === 'spread'
+                                            ? 'bg-green-100 rounded p-1' : '' }}">
+                                    <div>{{ $casinoData['spread']['away']['line'] > 0 ? '+' : '' }}{{ $casinoData['spread']['away']['line'] }}</div>
                                     <div class="text-gray-600">{{ $casinoData['spread']['away']['odds'] }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ number_format($casinoData['spread']['away']['probability'], 1) }}%
-                                    </div>
+                                    <div class="text-xs text-gray-500">{{ number_format($casinoData['spread']['away']['probability'], 1) }}%</div>
                                 </div>
-                                <div class="flex-1 text-center {{ in_array($casinoName, $game['away_team']['best_value_casinos']) && $casinoData['moneyLine']['away']['probability'] <= $casinoData['spread']['away']['probability'] ? 'bg-green-100 rounded p-1' : '' }}">
+                                <div class="flex-1 text-center {{
+                                            $game['away_team']['best_value']['casino'] === $casinoName &&
+                                            $game['away_team']['best_value']['type'] === 'moneyline'
+                                            ? 'bg-green-100 rounded p-1' : '' }}">
                                     @if(isset($casinoData['moneyLine']))
-                                        <div>
-                                            {{ $casinoData['moneyLine']['away']['odds'] > 0 ? '+' : '' }}{{ $casinoData['moneyLine']['away']['odds'] }}
-                                        </div>
-                                        <div class="text-xs text-gray-500">
-                                            {{ number_format($casinoData['moneyLine']['away']['probability'], 1) }}%
-                                        </div>
+                                        <div>{{ $casinoData['moneyLine']['away']['odds'] > 0 ? '+' : '' }}{{ $casinoData['moneyLine']['away']['odds'] }}</div>
+                                        <div class="text-xs text-gray-500">{{ number_format($casinoData['moneyLine']['away']['probability'], 1) }}%</div>
                                     @else
                                         <div class="text-gray-400">N/A</div>
                                     @endif
@@ -102,23 +100,21 @@
                     @foreach($game['casinos'] as $casinoName => $casinoData)
                         <td class="p-2">
                             <div class="flex text-sm">
-                                <div class="flex-1 text-center {{ in_array($casinoName, $game['home_team']['best_value_casinos']) ? 'bg-green-100 rounded p-1' : '' }}">
-                                    <div>
-                                        {{ $casinoData['spread']['home']['line'] > 0 ? '+' : '' }}{{ $casinoData['spread']['home']['line'] }}
-                                    </div>
+                                <div class="flex-1 text-center {{
+                                            $game['home_team']['best_value']['casino'] === $casinoName &&
+                                            $game['home_team']['best_value']['type'] === 'spread'
+                                            ? 'bg-green-100 rounded p-1' : '' }}">
+                                    <div>{{ $casinoData['spread']['home']['line'] > 0 ? '+' : '' }}{{ $casinoData['spread']['home']['line'] }}</div>
                                     <div class="text-gray-600">{{ $casinoData['spread']['home']['odds'] }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ number_format($casinoData['spread']['home']['probability'], 1) }}%
-                                    </div>
+                                    <div class="text-xs text-gray-500">{{ number_format($casinoData['spread']['home']['probability'], 1) }}%</div>
                                 </div>
-                                <div class="flex-1 text-center {{ in_array($casinoName, $game['home_team']['best_value_casinos']) && $casinoData['moneyLine']['home']['probability'] <= $casinoData['spread']['home']['probability'] ? 'bg-green-100 rounded p-1' : '' }}">
+                                <div class="flex-1 text-center {{
+                                            $game['home_team']['best_value']['casino'] === $casinoName &&
+                                            $game['home_team']['best_value']['type'] === 'moneyline'
+                                            ? 'bg-green-100 rounded p-1' : '' }}">
                                     @if(isset($casinoData['moneyLine']))
-                                        <div>
-                                            {{ $casinoData['moneyLine']['home']['odds'] > 0 ? '+' : '' }}{{ $casinoData['moneyLine']['home']['odds'] }}
-                                        </div>
-                                        <div class="text-xs text-gray-500">
-                                            {{ number_format($casinoData['moneyLine']['home']['probability'], 1) }}%
-                                        </div>
+                                        <div>{{ $casinoData['moneyLine']['home']['odds'] > 0 ? '+' : '' }}{{ $casinoData['moneyLine']['home']['odds'] }}</div>
+                                        <div class="text-xs text-gray-500">{{ number_format($casinoData['moneyLine']['home']['probability'], 1) }}%</div>
                                     @else
                                         <div class="text-gray-400">N/A</div>
                                     @endif

@@ -77,7 +77,7 @@ class DashboardController extends Controller
     public function nba(): View
     {
         $games = $this->getFilteredGames('nba');
-        return view('dashboard.nba', [
+        return view('dashboard.coming-soon', [
             'games' => $games,
             'sport' => 'NBA'
         ]);
@@ -91,7 +91,7 @@ class DashboardController extends Controller
     public function mlb(): View
     {
         $games = $this->getFilteredGames('mlb');
-        return view('dashboard.mlb', [
+        return view('dashboard.coming-soon', [
             'games' => $games,
             'sport' => 'MLB'
         ]);
@@ -105,7 +105,7 @@ class DashboardController extends Controller
     public function nhl(): View
     {
         $games = $this->getFilteredGames('nhl');
-        return view('dashboard.nhl', [
+        return view('dashboard.coming-soon', [
             'games' => $games,
             'sport' => 'NHL'
         ]);
