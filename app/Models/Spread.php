@@ -129,15 +129,54 @@ class Spread extends Model
 
     public function getCoverProbabilityWithJuiceAttribute()
     {
-        // Get base cover probability
-        $coverProb = $this->cover_probability;
-
-        // Calculate extra juice above 50%
+        // Convert odds directly to implied probability
         $odds = $this->spread < 0 ? $this->home_odds : $this->away_odds;
-        $juiceProb = (abs($odds) / (abs($odds) + 100) * 100) - 50;
 
-        // Add the extra juice probability
-        return round($coverProb + $juiceProb, 1);
+        if ($odds < 0) {
+            $probability = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $probability = 100 / ($odds + 100) * 100;
+        }
+
+        return round($probability, 1);
+    }
+
+    public function getHomeCoverProbabilityWithJuiceAttribute()
+    {
+        // Get base cover probability for the home team
+        $baseCoverProb = $this->spread < 0 ? $this->cover_probability : (100 - $this->cover_probability);
+
+        // Calculate juice from home odds
+        $odds = $this->home_odds;
+        if ($odds < 0) {
+            $juiceProb = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $juiceProb = 100 / ($odds + 100) * 100;
+        }
+
+        // Add the juice proportionally to the base probability
+        $juiceAdjustment = ($juiceProb - 50) * ($baseCoverProb / 100);
+
+        return round($baseCoverProb + $juiceAdjustment, 1);
+    }
+
+    public function getAwayCoverProbabilityWithJuiceAttribute()
+    {
+        // Get base cover probability for the away team
+        $baseCoverProb = $this->spread > 0 ? $this->cover_probability : (100 - $this->cover_probability);
+
+        // Calculate juice from away odds
+        $odds = $this->away_odds;
+        if ($odds < 0) {
+            $juiceProb = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $juiceProb = 100 / ($odds + 100) * 100;
+        }
+
+        // Add the juice proportionally to the base probability
+        $juiceAdjustment = ($juiceProb - 50) * ($baseCoverProb / 100);
+
+        return round($baseCoverProb + $juiceAdjustment, 1);
     }
 
 
