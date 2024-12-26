@@ -46,45 +46,22 @@ class Spread extends Model
         $isHalf = (floor($spreadValue) != $spreadValue);
         $totalGames = NflMargin::sum('occurrences');
 
-        \Log::info("--------------------");
-        \Log::info("Spread: {$this->spread}");
-        \Log::info("Spread Value: {$spreadValue}");
-        \Log::info("Is Half: " . ($isHalf ? 'true' : 'false'));
-        \Log::info("Total Games: {$totalGames}");
-
         if ($this->spread < 0) {  // Favorite
             if ($isHalf) {
                 // For spreads like -14.5
                 $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-
-                \Log::info("For {$this->spread}:");
-                \Log::info("Total games up to floor margin ({$spreadValue}): {$marginGames}");
-                \Log::info("Calculation: ({$marginGames}/2)/{$totalGames} * 100 + 50");
-
                 $probability = (($marginGames / 2) / $totalGames * 100) + 50;
-                \Log::info("Calculated probability: {$probability}");
-
                 return round($probability, 1);
             } else {
                 // For spreads like -14
                 $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
                     ->sum('occurrences');
-
                 $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
-
-                \Log::info("For {$this->spread}:");
-                \Log::info("Total games margin-1 ({$spreadValue}-1) or less: {$marginGames}");
-                \Log::info("Current margin ({$spreadValue}) games: {$currentMarginGames}");
-                \Log::info("Calculation: ({$marginGames}/2)/({$totalGames}-{$currentMarginGames}/2) * 100 + 50");
-
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
                 $probability = (($marginGames / 2) / $adjustedTotal * 100) + 50;
-                \Log::info("Adjusted total: {$adjustedTotal}");
-                \Log::info("Calculated probability: {$probability}");
-
                 return round($probability, 1);
             }
         } else {  // Underdog
@@ -92,36 +69,19 @@ class Spread extends Model
                 // For spreads like +14.5
                 $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-
-                \Log::info("For {$this->spread} (underdog half):");
-                \Log::info("Total games up to floor margin ({$spreadValue}): {$marginGames}");
-
                 $favProb = (($marginGames / 2) / $totalGames * 100) + 50;
                 $probability = 100 - $favProb;
-                \Log::info("Favorite probability: {$favProb}");
-                \Log::info("Underdog probability: {$probability}");
-
                 return round($probability, 1);
             } else {
                 // For spreads like +14
                 $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
                     ->sum('occurrences');
-
                 $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
-
-                \Log::info("For {$this->spread} (underdog whole):");
-                \Log::info("Total games margin-1 ({$spreadValue}-1) or less: {$marginGames}");
-                \Log::info("Current margin ({$spreadValue}) games: {$currentMarginGames}");
-
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
                 $favProb = (($marginGames / 2) / $adjustedTotal * 100) + 50;
                 $probability = 100 - $favProb;
-                \Log::info("Adjusted total: {$adjustedTotal}");
-                \Log::info("Favorite probability: {$favProb}");
-                \Log::info("Underdog probability: {$probability}");
-
                 return round($probability, 1);
             }
         }
@@ -143,8 +103,8 @@ class Spread extends Model
 
     public function getHomeCoverProbabilityWithJuiceAttribute()
     {
-        // Get base cover probability for the home team
-        $baseCoverProb = $this->spread < 0 ? $this->cover_probability : (100 - $this->cover_probability);
+        // Get base probability - this is already handling favorite/underdog calculation
+        $baseCoverProb = $this->cover_probability;
 
         // Calculate juice from home odds
         $odds = $this->home_odds;
@@ -162,8 +122,8 @@ class Spread extends Model
 
     public function getAwayCoverProbabilityWithJuiceAttribute()
     {
-        // Get base cover probability for the away team
-        $baseCoverProb = $this->spread > 0 ? $this->cover_probability : (100 - $this->cover_probability);
+        // Base probability is the opposite of home team's probability
+        $baseCoverProb = 100 - $this->cover_probability;
 
         // Calculate juice from away odds
         $odds = $this->away_odds;
