@@ -11,4 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('odds:fetch-current americanfootball_nfl')->everyFifteenMinutes();
 Schedule::command('odds:fetch-current americanfootball_ncaaf')->everyFifteenMinutes();
 Schedule::command('espn:fetch-fpi')->daily();
-Schedule::command('php artisan espn:fetch-college-fpi')->daily();
+Schedule::command('espn:fetch-college-fpi')->daily();
