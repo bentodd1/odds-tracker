@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 $schedule = new Schedule;
-Schedule::command('odds:fetch-current americanfootball_nfl')->everyFifteenMinutes();
-Schedule::command('odds:fetch-current americanfootball_ncaaf')->everyFifteenMinutes();
-Schedule::command('espn:fetch-fpi')->daily();
-Schedule::command('espn:fetch-college-fpi')->daily();
+$schedule->command('odds:fetch-current americanfootball_nfl')->everyFifteenMinutes();
+$schedule->command('odds:fetch-current americanfootball_ncaaf')->everyFifteenMinutes();
+$schedule->command('espn:fetch-fpi')->daily();
+$schedule->command('espn:fetch-college-fpi')->daily();
