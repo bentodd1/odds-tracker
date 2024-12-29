@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\NflMargin;
 use Carbon\Carbon;
 
 class GameTransformationService
@@ -73,14 +74,46 @@ class GameTransformationService
 
         if ($homeTeamFpi && $awayTeamFpi) {
             $fpiDiff = $homeTeamFpi->rating - $awayTeamFpi->rating + 2;
-            $homeWinProb = (1 / (1 + exp(-$fpiDiff/8)) * 100);
+            $spreadValue = abs($fpiDiff);
+            $isHalf = (floor($spreadValue) != $spreadValue);
+            $totalGames = NflMargin::sum('occurrences');
+
+            if ($fpiDiff < 0) {  // Away team favored
+                if ($isHalf) {
+                    $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                        ->sum('occurrences');
+                    $homeWinProb = 100 - ((($marginGames / 2) / $totalGames * 100) + 50);
+                } else {
+                    $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                        ->sum('occurrences');
+                    $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                        ->first()
+                        ->occurrences ?? 0;
+                    $adjustedTotal = $totalGames - ($currentMarginGames / 2);
+                    $homeWinProb = 100 - ((($marginGames / 2) / $adjustedTotal * 100) + 50);
+                }
+            } else {  // Home team favored
+                if ($isHalf) {
+                    $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                        ->sum('occurrences');
+                    $homeWinProb = (($marginGames / 2) / $totalGames * 100) + 50;
+                } else {
+                    $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                        ->sum('occurrences');
+                    $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                        ->first()
+                        ->occurrences ?? 0;
+                    $adjustedTotal = $totalGames - ($currentMarginGames / 2);
+                    $homeWinProb = (($marginGames / 2) / $adjustedTotal * 100) + 50;
+                }
+            }
         }
 
         return [
             'home_fpi' => $homeTeamFpi ? $homeTeamFpi->rating : null,
             'away_fpi' => $awayTeamFpi ? $awayTeamFpi->rating : null,
-            'home_win_probability' => $fpiDiff ? $homeWinProb : null,
-            'away_win_probability' => $fpiDiff ? (100 - $homeWinProb) : null
+            'home_win_probability' => $fpiDiff ? round($homeWinProb, 1) : null,
+            'away_win_probability' => $fpiDiff ? round(100 - $homeWinProb, 1) : null
         ];
     }
 
