@@ -31,7 +31,7 @@ class DashboardController extends Controller
     private function getFilteredGames(string $sportTitle)
     {
         // Get DraftKings and FanDuel casino IDs
-        $casinoIds = Casino::whereIn('name', ['draftkings', 'fanduel'])
+        $casinoIds = Casino::whereIn('name', ['draftkings', 'fanduel', 'betmgm', 'caesars', 'barstool', 'pointsbetus'])
             ->pluck('id');
 
         $games = Game::with([
