@@ -38,5 +38,9 @@ return [
         'key' => env('ODDS_API_KEY'),
         'base_url' => 'https://api.the-odds-api.com/v4'
     ],
+    'posthog' => [
+        'key' => env('POSTHOG_KEY'),
+        'host' => env('POSTHOG_HOST'),
+    ],
 
 ];

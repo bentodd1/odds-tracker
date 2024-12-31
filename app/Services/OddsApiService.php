@@ -39,10 +39,6 @@ class OddsApiService
 
             // Check if we have the data key and it's an array
             if (!isset($responseData['data']) || !is_array($responseData['data'])) {
-                Log::warning('No games data in response', [
-                    'response' => $responseData,
-                    'date' => $date
-                ]);
                 return [];
             }
 

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use App\Models\Visitor;
 use Illuminate\Http\Request;
+use PostHog\PostHog;
 use Stevebauman\Location\Facades\Location;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -12,6 +13,16 @@ class TrackVisitor
 {
     public function handle(Request $request, Closure $next): Response
     {
+        PostHog::capture([
+            'distinctId' => $request->ip(),
+            'event' => 'pageview',
+            'properties' => [
+                'sport' => $request->segment(1),
+                'path' => $request->path(),
+                'referrer' => $request->header('referer')
+            ]
+        ]);
+
         if (!$request->is('api/*') && !$request->is('admin/*')) {
             $ip = $request->ip();
             $locationData = Location::get($ip);
