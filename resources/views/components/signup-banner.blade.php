@@ -2,9 +2,9 @@
     <div class="max-w-7xl mx-auto py-3 px-3 sm:px-6 lg:px-8">
         <div class="pr-16 sm:text-center sm:px-16">
             <p class="font-medium text-white">
-                <span class="md:inline">Get early access to premium features!</span>
+                <span class="md:inline">Get early access to new features!</span>
                 <span class="block sm:ml-2 sm:inline-block">
-                    <button @click="$dispatch('open-signup')" class="text-white font-semibold underline">Sign up now</button>
+                    <button @click="$dispatch('open-signup')" class="text-white font-semibold underline">Get first access to new features</button>
                 </span>
             </p>
         </div>
