@@ -118,29 +118,6 @@ class GameTransformationService
     }
 
     /**
-     * Transform casino data for spreads and money lines
-     *
-     * @param \App\Models\Game $game
-     * @return array
-     */
-    private function transformCasinoData($game)
-    {
-        $casinoData = [];
-
-        foreach ($game->spreads->groupBy('casino_id') as $casinoId => $casinoSpreads) {
-            $spread = $casinoSpreads->sortByDesc('recorded_at')->first();
-            $moneyLine = $game->moneyLines
-                ->where('casino_id', $casinoId)
-                ->sortByDesc('recorded_at')
-                ->first();
-
-            $casinoData[$spread->casino->name] = $this->formatCasinoEntry($spread, $moneyLine);
-        }
-
-        return $casinoData;
-    }
-
-    /**
      * Format a single casino's entry with spread and money line data
      *
      * @param \App\Models\Spread $spread
@@ -176,6 +153,27 @@ class GameTransformationService
         ];
     }
 
+    private function transformCasinoData($game)
+    {
+        $casinoData = [];
+
+        // Only process spreads that have a corresponding casino
+        foreach ($game->spreads->filter(fn($spread) => $spread->casino)->groupBy('casino_id') as $casinoId => $casinoSpreads) {
+            $spread = $casinoSpreads->sortByDesc('recorded_at')->first();
+            $moneyLine = $game->moneyLines
+                ->where('casino_id', $casinoId)
+                ->sortByDesc('recorded_at')
+                ->first();
+
+            if ($spread && $spread->casino) {
+                $casinoData[$spread->casino->name] = $this->formatCasinoEntry($spread, $moneyLine);
+            }
+        }
+
+        return $casinoData;
+    }
+
+
     /**
      * Calculate which casinos offer the best values for each team
      *
@@ -191,33 +189,40 @@ class GameTransformationService
         $bestAwayBook = null;
         $bestAwayBetType = null;
 
-        foreach ($casinoData as $casinoName => $data) {
-            // Check home team probabilities
-            $homeSpreadProb = $data['spread']['home']['probability'];
-            if ($homeSpreadProb < $lowestHomeProb) {
-                $lowestHomeProb = $homeSpreadProb;
-                $bestHomeBook = $casinoName;
-                $bestHomeBetType = 'spread';
-            }
+        // Only process if we have casino data
+        if (!empty($casinoData)) {
+            foreach ($casinoData as $casinoName => $data) {
+                // Check home team probabilities
+                $homeSpreadProb = $data['spread']['home']['probability'] ?? 100;
+                if ($homeSpreadProb < $lowestHomeProb) {
+                    $lowestHomeProb = $homeSpreadProb;
+                    $bestHomeBook = $casinoName;
+                    $bestHomeBetType = 'spread';
+                }
 
-            if (isset($data['moneyLine']) && $data['moneyLine']['home']['probability'] < $lowestHomeProb) {
-                $lowestHomeProb = $data['moneyLine']['home']['probability'];
-                $bestHomeBook = $casinoName;
-                $bestHomeBetType = 'moneyline';
-            }
+                if (isset($data['moneyLine']) &&
+                    isset($data['moneyLine']['home']['probability']) &&
+                    $data['moneyLine']['home']['probability'] < $lowestHomeProb) {
+                    $lowestHomeProb = $data['moneyLine']['home']['probability'];
+                    $bestHomeBook = $casinoName;
+                    $bestHomeBetType = 'moneyline';
+                }
 
-            // Check away team probabilities
-            $awaySpreadProb = $data['spread']['away']['probability'];
-            if ($awaySpreadProb < $lowestAwayProb) {
-                $lowestAwayProb = $awaySpreadProb;
-                $bestAwayBook = $casinoName;
-                $bestAwayBetType = 'spread';
-            }
+                // Check away team probabilities
+                $awaySpreadProb = $data['spread']['away']['probability'] ?? 100;
+                if ($awaySpreadProb < $lowestAwayProb) {
+                    $lowestAwayProb = $awaySpreadProb;
+                    $bestAwayBook = $casinoName;
+                    $bestAwayBetType = 'spread';
+                }
 
-            if (isset($data['moneyLine']) && $data['moneyLine']['away']['probability'] < $lowestAwayProb) {
-                $lowestAwayProb = $data['moneyLine']['away']['probability'];
-                $bestAwayBook = $casinoName;
-                $bestAwayBetType = 'moneyline';
+                if (isset($data['moneyLine']) &&
+                    isset($data['moneyLine']['away']['probability']) &&
+                    $data['moneyLine']['away']['probability'] < $lowestAwayProb) {
+                    $lowestAwayProb = $data['moneyLine']['away']['probability'];
+                    $bestAwayBook = $casinoName;
+                    $bestAwayBetType = 'moneyline';
+                }
             }
         }
 

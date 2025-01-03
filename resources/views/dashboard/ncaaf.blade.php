@@ -2,6 +2,9 @@
 
 @section('title', 'NCAAF Odds Dashboard')
 
+@section('head')
+@endsection
+
 @section('content')
     <div class="container mx-auto px-4 py-8">
         <!-- Dashboard Explanation Header -->
@@ -31,7 +34,7 @@
                             <div class="w-4 h-4 mt-1 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs">2</div>
                             <div>
                                 <span class="font-medium">Implied Probability</span>
-                                <p class="text-sm text-gray-600">The small percentage under each betting line shows what you're "paying for". The lower this number, the better the deal you're getting. Look for lower implied probabilities when comparing the same bet across bookmakers.</p>
+                                <p class="text-sm text-gray-600">The small percentage under each betting line shows what you're "paying for". The lower this number, the better the deal you're getting.</p>
                             </div>
                         </div>
                     </div>
@@ -71,6 +74,37 @@
             </div>
         </div>
 
+        <!-- Casino Selector -->
+        <div class="mb-6 bg-white rounded-lg shadow-md p-4">
+            <button type="button"
+                    class="w-full flex justify-between items-center text-sm font-medium text-gray-700 mb-2"
+                    onclick="toggleCasinoSelector()">
+                <span>Select Bookmakers (Max 3)</span>
+                <svg id="selector-arrow" class="w-5 h-5 transform rotate-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <form id="casino-selector-form" action="{{ route('dashboard.ncaaf') }}" method="GET" class="hidden">
+                <div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-4">
+                        @foreach($availableCasinos as $casino)
+                            <button type="button"
+                                    class="casino-btn p-2 border rounded-md text-center {{ in_array($casino->name, $selectedCasinos) ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300' }}"
+                                    data-casino="{{ $casino->name }}">
+                                {{ ucfirst($casino->name) }}
+                            </button>
+                        @endforeach
+                    </div>
+                    <input type="hidden" name="casinos" id="selected-casinos" value="{{ implode(',', $selectedCasinos) }}">
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                        Update View
+                    </button>
+                </div>
+            </form>
+        </div>
+
         <!-- Main Odds Table -->
         <div class="bg-white rounded-lg shadow-md overflow-x-auto">
             <table class="w-full min-w-[1200px]">
@@ -79,7 +113,7 @@
                     <th class="p-2 text-left">Time</th>
                     <th class="p-2 text-left">Teams</th>
                     <th class="p-2 text-center">FPI (Win %)</th>
-                    @foreach($games->first()['casinos'] as $casinoName => $casinoData)
+                    @foreach($selectedCasinos as $casinoName)
                         <th class="p-2 text-center">
                             <div>{{ ucfirst($casinoName) }}</div>
                             <div class="flex text-sm">
@@ -106,24 +140,28 @@
                                 {{ $game['away_team']['win_probability'] ? number_format($game['away_team']['win_probability'], 1) . '%' : 'N/A' }}
                             </div>
                         </td>
-                        @foreach($game['casinos'] as $casinoName => $casinoData)
+                        @foreach($selectedCasinos as $casinoName)
                             <td class="p-2">
                                 <div class="flex text-sm">
                                     <div class="flex-1 text-center {{
-                                            $game['away_team']['best_value']['casino'] === $casinoName &&
-                                            $game['away_team']['best_value']['type'] === 'spread'
-                                            ? 'bg-green-100 rounded p-1' : '' }}">
-                                        <div>{{ $casinoData['spread']['away']['line'] > 0 ? '+' : '' }}{{ $casinoData['spread']['away']['line'] }}</div>
-                                        <div class="text-gray-600">{{ $casinoData['spread']['away']['odds'] }}</div>
-                                        <div class="text-xs text-gray-500">{{ number_format($casinoData['spread']['away']['probability'], 1) }}%</div>
+                                                $game['away_team']['best_value']['casino'] === $casinoName &&
+                                                $game['away_team']['best_value']['type'] === 'spread'
+                                                ? 'bg-green-100 rounded p-1' : '' }}">
+                                        @if(isset($game['casinos'][$casinoName]['spread']['away']))
+                                            <div>{{ $game['casinos'][$casinoName]['spread']['away']['line'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['spread']['away']['line'] }}</div>
+                                            <div class="text-gray-600">{{ $game['casinos'][$casinoName]['spread']['away']['odds'] }}</div>
+                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['spread']['away']['probability'], 1) }}%</div>
+                                        @else
+                                            <div class="text-gray-400">N/A</div>
+                                        @endif
                                     </div>
                                     <div class="flex-1 text-center {{
-                                            $game['away_team']['best_value']['casino'] === $casinoName &&
-                                            $game['away_team']['best_value']['type'] === 'moneyline'
-                                            ? 'bg-green-100 rounded p-1' : '' }}">
-                                        @if(isset($casinoData['moneyLine']))
-                                            <div>{{ $casinoData['moneyLine']['away']['odds'] > 0 ? '+' : '' }}{{ $casinoData['moneyLine']['away']['odds'] }}</div>
-                                            <div class="text-xs text-gray-500">{{ number_format($casinoData['moneyLine']['away']['probability'], 1) }}%</div>
+                                                $game['away_team']['best_value']['casino'] === $casinoName &&
+                                                $game['away_team']['best_value']['type'] === 'moneyline'
+                                                ? 'bg-green-100 rounded p-1' : '' }}">
+                                        @if(isset($game['casinos'][$casinoName]['moneyLine']['away']))
+                                            <div>{{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] }}</div>
+                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['moneyLine']['away']['probability'], 1) }}%</div>
                                         @else
                                             <div class="text-gray-400">N/A</div>
                                         @endif
@@ -144,24 +182,28 @@
                                 {{ $game['home_team']['win_probability'] ? number_format($game['home_team']['win_probability'], 1) . '%' : 'N/A' }}
                             </div>
                         </td>
-                        @foreach($game['casinos'] as $casinoName => $casinoData)
+                        @foreach($selectedCasinos as $casinoName)
                             <td class="p-2">
                                 <div class="flex text-sm">
                                     <div class="flex-1 text-center {{
-                                            $game['home_team']['best_value']['casino'] === $casinoName &&
-                                            $game['home_team']['best_value']['type'] === 'spread'
-                                            ? 'bg-green-100 rounded p-1' : '' }}">
-                                        <div>{{ $casinoData['spread']['home']['line'] > 0 ? '+' : '' }}{{ $casinoData['spread']['home']['line'] }}</div>
-                                        <div class="text-gray-600">{{ $casinoData['spread']['home']['odds'] }}</div>
-                                        <div class="text-xs text-gray-500">{{ number_format($casinoData['spread']['home']['probability'], 1) }}%</div>
+                                                $game['home_team']['best_value']['casino'] === $casinoName &&
+                                                $game['home_team']['best_value']['type'] === 'spread'
+                                                ? 'bg-green-100 rounded p-1' : '' }}">
+                                        @if(isset($game['casinos'][$casinoName]['spread']['home']))
+                                            <div>{{ $game['casinos'][$casinoName]['spread']['home']['line'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['spread']['home']['line'] }}</div>
+                                            <div class="text-gray-600">{{ $game['casinos'][$casinoName]['spread']['home']['odds'] }}</div>
+                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['spread']['home']['probability'], 1) }}%</div>
+                                        @else
+                                            <div class="text-gray-400">N/A</div>
+                                        @endif
                                     </div>
                                     <div class="flex-1 text-center {{
-                                            $game['home_team']['best_value']['casino'] === $casinoName &&
-                                            $game['home_team']['best_value']['type'] === 'moneyline'
-                                            ? 'bg-green-100 rounded p-1' : '' }}">
-                                        @if(isset($casinoData['moneyLine']))
-                                            <div>{{ $casinoData['moneyLine']['home']['odds'] > 0 ? '+' : '' }}{{ $casinoData['moneyLine']['home']['odds'] }}</div>
-                                            <div class="text-xs text-gray-500">{{ number_format($casinoData['moneyLine']['home']['probability'], 1) }}%</div>
+                                                $game['home_team']['best_value']['casino'] === $casinoName &&
+                                                $game['home_team']['best_value']['type'] === 'moneyline'
+                                                ? 'bg-green-100 rounded p-1' : '' }}">
+                                        @if(isset($game['casinos'][$casinoName]['moneyLine']['home']))
+                                            <div>{{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] }}</div>
+                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['moneyLine']['home']['probability'], 1) }}%</div>
                                         @else
                                             <div class="text-gray-400">N/A</div>
                                         @endif
@@ -179,13 +221,48 @@
 
 @push('scripts')
     <script>
-        function closeExplanation() {
-            const header = document.getElementById('explanation-header');
-            header.style.display = 'none';
-            localStorage.setItem('explanationClosed', 'true');
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.casino-btn');
+            const hiddenInput = document.getElementById('selected-casinos');
+            const maxSelections = 3;
+
+            function toggleCasinoSelector() {
+                const form = document.getElementById('casino-selector-form');
+                const arrow = document.getElementById('selector-arrow');
+                form.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+            }
+            window.toggleCasinoSelector = toggleCasinoSelector;
+
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const casino = this.dataset.casino;
+                    let selected = hiddenInput.value ? hiddenInput.value.split(',').filter(Boolean) : [];
+
+                    if (this.classList.contains('bg-blue-100')) {
+                        // Deselect
+                        selected = selected.filter(item => item !== casino);
+                        this.classList.remove('bg-blue-100', 'border-blue-500');
+                        this.classList.add('bg-white', 'border-gray-300');
+                    } else if (selected.length < maxSelections) {
+                        // Select
+                        selected.push(casino);
+                        this.classList.remove('bg-white', 'border-gray-300');
+                        this.classList.add('bg-blue-100', 'border-blue-500');
+                    }
+
+                    hiddenInput.value = selected.join(',');
+                });
+            });
+
+            function closeExplanation() {
+                const header = document.getElementById('explanation-header');
+                header.style.display = 'none';
+                localStorage.setItem('explanationClosed', 'true');
+            }
+            window.closeExplanation = closeExplanation;
+
             if (localStorage.getItem('explanationClosed') === 'true') {
                 document.getElementById('explanation-header').style.display = 'none';
             }

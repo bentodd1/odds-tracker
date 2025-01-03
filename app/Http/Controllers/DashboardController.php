@@ -6,6 +6,7 @@ use App\Models\Casino;
 use App\Models\Game;
 use App\Services\GameTransformationService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -28,10 +29,10 @@ class DashboardController extends Controller
      * @param string $sportTitle
      * @return \Illuminate\Support\Collection
      */
-    private function getFilteredGames(string $sportTitle)
+    private function getFilteredGames(string $sportTitle, array $casinoNames = ['draftkings', 'fanduel', 'betmgm'])
     {
-        // Get DraftKings and FanDuel casino IDs
-        $casinoIds = Casino::whereIn('name', ['draftkings', 'fanduel', 'betmgm', 'caesars', 'barstool', 'pointsbetus'])
+        // Get casino IDs
+        $casinoIds = Casino::whereIn('name', $casinoNames)
             ->pluck('id');
 
         $games = Game::with([
@@ -58,14 +59,19 @@ class DashboardController extends Controller
     /**
      * Display NFL games dashboard
      *
+     * @param Request $request
      * @return View
      */
-    public function nfl(): View
+    public function nfl(Request $request): View
     {
-        $games = $this->getFilteredGames('nfl');
+        $casinos = $this->getCasinos($request);
+        $games = $this->getFilteredGames('nfl', $casinos['selectedCasinos']);
+
         return view('dashboard.nfl', [
             'games' => $games,
-            'sport' => 'NFL'
+            'sport' => 'NFL',
+            'availableCasinos' => $casinos['availableCasinos'],
+            'selectedCasinos' => $casinos['selectedCasinos']
         ]);
     }
 
@@ -116,12 +122,61 @@ class DashboardController extends Controller
      *
      * @return View
      */
-    public function ncaaf(): View
+
+    /**
+     * Display NCAAF games dashboard
+     *
+     * @param Request $request
+     * @return View
+     */
+    public function ncaaf(Request $request): View
     {
-        $games = $this->getFilteredGames('ncaaf');
+        $casinos = $this->getCasinos($request);
+        $games = $this->getFilteredGames('ncaaf', $casinos['selectedCasinos']);
+
         return view('dashboard.ncaaf', [
             'games' => $games,
-            'sport' => 'NCAAF'
+            'sport' => 'NCAAF',
+            'availableCasinos' => $casinos['availableCasinos'],
+            'selectedCasinos' => $casinos['selectedCasinos']
         ]);
     }
+
+
+
+    /**
+     * Get available and selected casinos
+     *
+     * @param Request $request
+     * @return array
+     */
+    private function getCasinos(Request $request): array
+    {
+        $availableCasinos = Casino::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $defaultCasinos = ['draftkings', 'fanduel', 'betmgm'];
+
+        // Handle array or string input
+        $selectedCasinos = $request->input('casinos');
+        if (is_array($selectedCasinos)) {
+            $selectedCasinos = $selectedCasinos[0] ?? '';
+        }
+        $selectedCasinos = $selectedCasinos ? explode(',', $selectedCasinos) : $defaultCasinos;
+
+        $selectedCasinos = array_slice($selectedCasinos, 0, 3);
+        $validCasinos = $availableCasinos->pluck('name')->toArray();
+        $selectedCasinos = array_intersect($selectedCasinos, $validCasinos);
+
+        if (empty($selectedCasinos)) {
+            $selectedCasinos = array_intersect($defaultCasinos, $validCasinos);
+        }
+
+        return [
+            'availableCasinos' => $availableCasinos,
+            'selectedCasinos' => $selectedCasinos
+        ];
+    }
+
 }

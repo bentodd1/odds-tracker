@@ -17,5 +17,6 @@ Route::middleware([TrackVisitor::class])->group(function () {
     Route::get('/mlb', [DashboardController::class, 'mlb'])->name('dashboard.mlb');
     Route::get('/nhl', [DashboardController::class, 'nhl'])->name('dashboard.nhl');
     Route::post('/signup', [EarlyAccessController::class, 'store'])->name('signup.store');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 });

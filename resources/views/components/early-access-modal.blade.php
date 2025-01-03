@@ -20,7 +20,7 @@
                     <div class="sm:flex sm:items-start">
                         <div class="w-full mt-3 text-center sm:mt-0 sm:text-left">
                             <h3 class="text-lg font-semibold leading-6 text-gray-900 mb-4">
-                                Get Early Access to Premium Features
+                                Get Early Access to Premium Features, I'll Notify You
                             </h3>
 
                             <div class="mt-2 mb-4">
