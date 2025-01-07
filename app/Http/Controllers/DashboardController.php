@@ -54,6 +54,10 @@ class DashboardController extends Controller
             ->join('sports', 'games.sport_id', '=', 'sports.id')
             ->where('sports.title', $sportTitle)
             ->where('commence_time', '>', Carbon::now())
+            ->whereHas('spreads', function($query) use ($casinoIds, $oneDayAgo) {
+                $query->whereIn('casino_id', $casinoIds)
+                    ->where('created_at', '>=', $oneDayAgo);
+            })
             ->orderBy('commence_time', 'asc')
             ->take(30)
             ->select('games.*')
