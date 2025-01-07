@@ -9,10 +9,16 @@ use Carbon\Carbon;
 class OddsApiService
 {
     protected $apiKey;
+    protected $region = 'eu';
 
     public function __construct()
     {
         $this->apiKey = env('ODDS_API_KEY');
+    }
+
+    public function setRegion($region)
+    {
+        $this->region = $region;
     }
 
     public function getHistoricalOdds($sportKey, $date)
@@ -25,7 +31,7 @@ class OddsApiService
             $response = Http::accept('application/json')
                 ->get($url, [
                     'apiKey' => $this->apiKey,
-                    'regions' => 'eu,us,uk',
+                    'regions' => $this->region,
                     'markets' => 'spreads',
                     'oddsFormat' => 'american',
                     'date' => $isoDate
@@ -37,7 +43,6 @@ class OddsApiService
 
             $responseData = $response->json();
 
-            // Check if we have the data key and it's an array
             if (!isset($responseData['data']) || !is_array($responseData['data'])) {
                 return [];
             }

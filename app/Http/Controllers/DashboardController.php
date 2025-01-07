@@ -35,9 +35,15 @@ class DashboardController extends Controller
         $casinoIds = Casino::whereIn('name', $casinoNames)
             ->pluck('id');
 
+        $oneDayAgo = Carbon::now()->subDay();
+
         $games = Game::with([
-            'spreads' => fn($query) => $query->whereIn('casino_id', $casinoIds),
-            'moneyLines' => fn($query) => $query->whereIn('casino_id', $casinoIds),
+            'spreads' => fn($query) => $query
+                ->whereIn('casino_id', $casinoIds)
+                ->where('created_at', '>=', $oneDayAgo),
+            'moneyLines' => fn($query) => $query
+                ->whereIn('casino_id', $casinoIds)
+                ->where('created_at', '>=', $oneDayAgo),
             'homeTeam',
             'awayTeam',
             'spreads.casino',

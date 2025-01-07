@@ -15,8 +15,10 @@ class FetchHistoricalSpreads extends Command
 {
     protected $signature = 'odds:fetch-historical-spreads
         {sportKey=americanfootball_nfl : The sport key to fetch spreads for}
+        {--region=us : Region to fetch spreads for (us, uk, eu)}
         {--start-date= : Optional start date (YYYY-MM-DD)}
         {--debug : Show debug information}';
+
     protected $description = 'Fetch one spread snapshot per day from The Odds API';
 
     protected $oddsApi;
@@ -32,28 +34,20 @@ class FetchHistoricalSpreads extends Command
     {
         $this->debug = $this->option('debug');
         $sportKey = $this->argument('sportKey');
-        $defaultStartDate = '2020-07-01';
+        $region = $this->option('region');
 
-        // Get start date from option or last recorded spread or default
-        $startDate = $this->option('start-date');
-        if (!$startDate) {
-            $lastSpread = Spread::whereHas('game', function ($query) use ($sportKey) {
-                $query->whereHas('sport', function ($q) use ($sportKey) {
-                    $q->where('key', $sportKey);
-                });
-            })
-                ->orderBy('recorded_at', 'desc')
-                ->first();
+        // Set the region in the OddsApiService
+        $this->oddsApi->setRegion($region);
 
-            $startDate = $lastSpread
-                ? Carbon::parse($lastSpread->recorded_at)->addDay()->format('Y-m-d')
-                : $defaultStartDate;
-        }
+        // Simply use the provided start date or default to 2 years ago
+        $startDate = $this->option('start-date')
+            ? Carbon::parse($this->option('start-date'))->format('Y-m-d')
+            : Carbon::now()->subYears(2)->format('Y-m-d');
 
         $currentDate = Carbon::parse($startDate);
         $endDate = Carbon::now();
 
-        $this->info("Fetching spreads from {$startDate} to {$endDate->format('Y-m-d')}");
+        $this->info("Fetching spreads for {$region} region from {$startDate} to {$endDate->format('Y-m-d')}");
 
         while ($currentDate->lte($endDate)) {
             $dateString = $currentDate->format('Y-m-d');
@@ -76,7 +70,7 @@ class FetchHistoricalSpreads extends Command
                         }
 
                         if ($this->isValidGameData($game)) {
-                            $this->processGame($game, $sportKey);
+                            $this->processGame($game, $sportKey, $region);
                             $gamesProcessed++;
                         } else {
                             if ($this->debug) {
@@ -101,8 +95,9 @@ class FetchHistoricalSpreads extends Command
         }
 
         $this->newLine();
-        $this->info("Completed fetching spreads for {$sportKey}");
+        $this->info("Completed fetching spreads for {$sportKey} in {$region} region");
     }
+
 
     protected function isValidGameData($game)
     {
