@@ -13,7 +13,8 @@
                 <h2 class="text-xl font-semibold">How to Read This Dashboard</h2>
                 <button onclick="closeExplanation()" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
@@ -24,17 +25,23 @@
                     <h3 class="text-lg font-semibold mb-2">Understanding the Numbers</h3>
                     <div class="space-y-3">
                         <div class="flex items-start space-x-2">
-                            <div class="w-4 h-4 mt-1 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs">1</div>
+                            <div
+                                class="w-4 h-4 mt-1 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs">1
+                            </div>
                             <div>
                                 <span class="font-medium">FPI (Win %)</span>
-                                <p class="text-sm text-gray-600">Analytics-based win probability prediction for each team.</p>
+                                <p class="text-sm text-gray-600">Analytics-based win probability prediction for each
+                                    team.</p>
                             </div>
                         </div>
                         <div class="flex items-start space-x-2">
-                            <div class="w-4 h-4 mt-1 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs">2</div>
+                            <div
+                                class="w-4 h-4 mt-1 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs">2
+                            </div>
                             <div>
                                 <span class="font-medium">Implied Probability</span>
-                                <p class="text-sm text-gray-600">The small percentage under each betting line shows what you're "paying for". The lower this number, the better the deal you're getting.</p>
+                                <p class="text-sm text-gray-600">The small percentage under each betting line shows what
+                                    you're "paying for". The lower this number, the better the deal you're getting.</p>
                             </div>
                         </div>
                     </div>
@@ -49,7 +56,8 @@
                             <span class="text-sm">Highlighted cells show the best available odds for that team across all bookmakers</span>
                         </div>
                         <div class="text-sm text-gray-600">
-                            <span class="font-medium">Pro Tip:</span> Compare odds across different bookmakers to find the best value for your bets.
+                            <span class="font-medium">Pro Tip:</span> Compare odds across different bookmakers to find
+                            the best value for your bets.
                         </div>
                     </div>
                 </div>
@@ -80,11 +88,13 @@
                     class="w-full flex justify-between items-center text-sm font-medium text-gray-700 mb-2"
                     onclick="toggleCasinoSelector()">
                 <span>Select Bookmakers (Max 3)</span>
-                <svg id="selector-arrow" class="w-5 h-5 transform rotate-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                <svg id="selector-arrow" class="w-5 h-5 transform rotate-0 transition-transform duration-200"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 9l-7 7-7-7"/>
                 </svg>
             </button>
-            <form id="casino-selector-form" action="{{ route('dashboard.ncaaf') }}" method="GET" class="hidden">
+            <form id="casino-selector-form" action="{{ route('dashboard.nfl') }}" method="GET" class="hidden">
                 <div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-4">
                         @foreach($availableCasinos as $casino)
@@ -129,16 +139,24 @@
                     <!-- Away Team Row -->
                     <tr class="border-t">
                         <td rowspan="2" class="p-2 align-middle">
-                            {{ Carbon\Carbon::parse($game['commence_time'])->format('n/j g:i A') }}
+                            {{ \Carbon\Carbon::parse($game['commence_time'])->format('n/j g:i A') }}
                         </td>
                         <td class="p-2">
                             <div class="font-medium">{{ $game['away_team']['name'] }}</div>
                         </td>
                         <td class="p-2 text-center">
-                            <div>{{ $game['away_team']['fpi'] ? number_format($game['away_team']['fpi'], 1) : 'N/A' }}</div>
+                            <div>
+                                {{ $game['away_team']['fpi'] ? number_format($game['away_team']['fpi'], 1) : 'N/A' }}
+                            </div>
                             <div class="text-sm text-gray-600">
                                 {{ $game['away_team']['win_probability'] ? number_format($game['away_team']['win_probability'], 1) . '%' : 'N/A' }}
                             </div>
+                            @if(!is_null($game['away_team']['ev_value']))
+                                <div class="text-xs mt-1 px-2 py-1 rounded-md inline-block
+                                    {{ $game['away_team']['ev_value'] >= 0 ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800' }}">
+                                    EV: {{ number_format($game['away_team']['ev_value'], 1) }}%
+                                </div>
+                            @endif
                         </td>
                         @foreach($selectedCasinos as $casinoName)
                             <td class="p-2">
@@ -148,9 +166,16 @@
                                                 $game['away_team']['best_value']['type'] === 'spread'
                                                 ? 'bg-green-100 rounded p-1' : '' }}">
                                         @if(isset($game['casinos'][$casinoName]['spread']['away']))
-                                            <div>{{ $game['casinos'][$casinoName]['spread']['away']['line'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['spread']['away']['line'] }}</div>
-                                            <div class="text-gray-600">{{ $game['casinos'][$casinoName]['spread']['away']['odds'] }}</div>
-                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['spread']['away']['probability'], 1) }}%</div>
+                                            <div>
+                                                {{ $game['casinos'][$casinoName]['spread']['away']['line'] > 0 ? '+' : '' }}
+                                                {{ $game['casinos'][$casinoName]['spread']['away']['line'] }}
+                                            </div>
+                                            <div class="text-gray-600">
+                                                {{ $game['casinos'][$casinoName]['spread']['away']['odds'] }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ number_format($game['casinos'][$casinoName]['spread']['away']['probability'], 1) }}%
+                                            </div>
                                         @else
                                             <div class="text-gray-400">N/A</div>
                                         @endif
@@ -160,8 +185,13 @@
                                                 $game['away_team']['best_value']['type'] === 'moneyline'
                                                 ? 'bg-green-100 rounded p-1' : '' }}">
                                         @if(isset($game['casinos'][$casinoName]['moneyLine']['away']))
-                                            <div>{{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] }}</div>
-                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['moneyLine']['away']['probability'], 1) }}%</div>
+                                            <div>
+                                                {{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] > 0 ? '+' : '' }}
+                                                {{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ number_format($game['casinos'][$casinoName]['moneyLine']['away']['probability'], 1) }}%
+                                            </div>
                                         @else
                                             <div class="text-gray-400">N/A</div>
                                         @endif
@@ -177,10 +207,18 @@
                             <div class="font-medium">{{ $game['home_team']['name'] }}</div>
                         </td>
                         <td class="p-2 text-center">
-                            <div>{{ $game['home_team']['fpi'] ? number_format($game['home_team']['fpi'], 1) : 'N/A' }}</div>
+                            <div>
+                                {{ $game['home_team']['fpi'] ? number_format($game['home_team']['fpi'], 1) : 'N/A' }}
+                            </div>
                             <div class="text-sm text-gray-600">
                                 {{ $game['home_team']['win_probability'] ? number_format($game['home_team']['win_probability'], 1) . '%' : 'N/A' }}
                             </div>
+                            @if(!is_null($game['home_team']['ev_value']))
+                                <div class="text-xs mt-1 px-2 py-1 rounded-md inline-block
+                                    {{ $game['home_team']['ev_value'] >= 0 ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800' }}">
+                                    EV: {{ number_format($game['home_team']['ev_value'], 1) }}%
+                                </div>
+                            @endif
                         </td>
                         @foreach($selectedCasinos as $casinoName)
                             <td class="p-2">
@@ -190,9 +228,16 @@
                                                 $game['home_team']['best_value']['type'] === 'spread'
                                                 ? 'bg-green-100 rounded p-1' : '' }}">
                                         @if(isset($game['casinos'][$casinoName]['spread']['home']))
-                                            <div>{{ $game['casinos'][$casinoName]['spread']['home']['line'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['spread']['home']['line'] }}</div>
-                                            <div class="text-gray-600">{{ $game['casinos'][$casinoName]['spread']['home']['odds'] }}</div>
-                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['spread']['home']['probability'], 1) }}%</div>
+                                            <div>
+                                                {{ $game['casinos'][$casinoName]['spread']['home']['line'] > 0 ? '+' : '' }}
+                                                {{ $game['casinos'][$casinoName]['spread']['home']['line'] }}
+                                            </div>
+                                            <div class="text-gray-600">
+                                                {{ $game['casinos'][$casinoName]['spread']['home']['odds'] }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ number_format($game['casinos'][$casinoName]['spread']['home']['probability'], 1) }}%
+                                            </div>
                                         @else
                                             <div class="text-gray-400">N/A</div>
                                         @endif
@@ -202,8 +247,13 @@
                                                 $game['home_team']['best_value']['type'] === 'moneyline'
                                                 ? 'bg-green-100 rounded p-1' : '' }}">
                                         @if(isset($game['casinos'][$casinoName]['moneyLine']['home']))
-                                            <div>{{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] > 0 ? '+' : '' }}{{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] }}</div>
-                                            <div class="text-xs text-gray-500">{{ number_format($game['casinos'][$casinoName]['moneyLine']['home']['probability'], 1) }}%</div>
+                                            <div>
+                                                {{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] > 0 ? '+' : '' }}
+                                                {{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ number_format($game['casinos'][$casinoName]['moneyLine']['home']['probability'], 1) }}%
+                                            </div>
                                         @else
                                             <div class="text-gray-400">N/A</div>
                                         @endif
