@@ -4,15 +4,10 @@ namespace App\Services;
 
 use App\Models\NflMargin;
 use Carbon\Carbon;
+use App\Models\Game;
 
 class GameTransformationService
 {
-    /**
-     * Transform a collection of games
-     *
-     * @param \Illuminate\Database\Eloquent\Collection $games
-     * @return \Illuminate\Support\Collection
-     */
     public function transformGames($games)
     {
         return $games->map(function ($game) {
@@ -20,146 +15,138 @@ class GameTransformationService
         });
     }
 
-    /**
-     * Transform a single game
-     *
-     * @param \App\Models\Game $game
-     * @return array
-     */
     public function transformGame($game)
     {
-        $fpiData = $this->calculateFpiData($game);
+        // 1) Calculate FPI
+        $fpiData    = $this->calculateFpiData($game);
+
+        // 2) Gather odds data (spreads & moneyLines by casino)
         $casinoData = $this->transformCasinoData($game);
+
+        // 3) Determine the “best value” cells (highlighted in green)
         $bestValues = $this->calculateBestValues($casinoData);
 
+        // 4) Calculate EV separately for home & away
+        $homeEv = !is_null($fpiData['home_win_probability'])
+            ? $this->calculateEvValue(
+                $fpiData['home_win_probability'],
+                $casinoData,
+                'home' // <--- Only check home probabilities
+            )
+            : null;
+
+        $awayEv = !is_null($fpiData['away_win_probability'])
+            ? $this->calculateEvValue(
+                $fpiData['away_win_probability'],
+                $casinoData,
+                'away' // <--- Only check away probabilities
+            )
+            : null;
+
+        // Adjust commence time if needed (as your code does)
         $commenceTime = $game->commence_time->subHours(6);
 
-
         return [
-            'id' => $game->id,
-            'commence_time' =>$commenceTime,
+            'id'            => $game->id,
+            'commence_time' => $commenceTime,
+
             'home_team' => [
-                'name' => $game->homeTeam->name,
-                'fpi' => $fpiData['home_fpi'],
+                'name'            => $game->homeTeam->name,
+                'fpi'             => $fpiData['home_fpi'],
                 'win_probability' => $fpiData['home_win_probability'],
-                'best_value' => [     // Added this structure
+                'ev_value'        => $homeEv,   // <--- The corrected EV
+                'best_value'      => [
                     'casino' => $bestValues['home']['casino'],
-                    'type' => $bestValues['home']['type']
-                ]
+                    'type'   => $bestValues['home']['type']
+                ],
             ],
+
             'away_team' => [
-                'name' => $game->awayTeam->name,
-                'fpi' => $fpiData['away_fpi'],
+                'name'            => $game->awayTeam->name,
+                'fpi'             => $fpiData['away_fpi'],
                 'win_probability' => $fpiData['away_win_probability'],
-                'best_value' => [     // Added this structure
+                'ev_value'        => $awayEv,   // <--- The corrected EV
+                'best_value'      => [
                     'casino' => $bestValues['away']['casino'],
-                    'type' => $bestValues['away']['type']
-                ]
+                    'type'   => $bestValues['away']['type']
+                ],
             ],
+
             'casinos' => $casinoData
         ];
     }
 
-    /**
-     * Calculate FPI data for both teams
-     *
-     * @param \App\Models\Game $game
-     * @return array
-     */
     private function calculateFpiData($game)
     {
         $homeTeamFpi = $game->homeTeam->latestFpi()->first();
         $awayTeamFpi = $game->awayTeam->latestFpi()->first();
-        $fpiDiff = null;
-
-        if ($homeTeamFpi && $awayTeamFpi) {
-            $fpiDiff = $homeTeamFpi->rating - $awayTeamFpi->rating + 2;
-            $spreadValue = abs($fpiDiff);
-            $isHalf = (floor($spreadValue) != $spreadValue);
-            $totalGames = NflMargin::sum('occurrences');
-
-            if ($fpiDiff < 0) {  // Away team favored
-                if ($isHalf) {
-                    $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
-                        ->sum('occurrences');
-                    $homeWinProb = 100 - ((($marginGames / 2) / $totalGames * 100) + 50);
-                } else {
-                    $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
-                        ->sum('occurrences');
-                    $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
-                        ->first()
-                        ->occurrences ?? 0;
-                    $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                    $homeWinProb = 100 - ((($marginGames / 2) / $adjustedTotal * 100) + 50);
-                }
-            } else {  // Home team favored
-                if ($isHalf) {
-                    $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
-                        ->sum('occurrences');
-                    $homeWinProb = (($marginGames / 2) / $totalGames * 100) + 50;
-                } else {
-                    $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
-                        ->sum('occurrences');
-                    $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
-                        ->first()
-                        ->occurrences ?? 0;
-                    $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                    $homeWinProb = (($marginGames / 2) / $adjustedTotal * 100) + 50;
-                }
-            }
+        if (!$homeTeamFpi || !$awayTeamFpi) {
+            return [
+                'home_fpi'            => $homeTeamFpi ? $homeTeamFpi->rating : null,
+                'away_fpi'            => $awayTeamFpi ? $awayTeamFpi->rating : null,
+                'home_win_probability'=> null,
+                'away_win_probability'=> null
+            ];
         }
 
-        return [
-            'home_fpi' => $homeTeamFpi ? $homeTeamFpi->rating : null,
-            'away_fpi' => $awayTeamFpi ? $awayTeamFpi->rating : null,
-            'home_win_probability' => $fpiDiff ? round($homeWinProb, 1) : null,
-            'away_win_probability' => $fpiDiff ? round(100 - $homeWinProb, 1) : null
-        ];
-    }
+        $fpiDiff     = $homeTeamFpi->rating - $awayTeamFpi->rating + 2;
+        $spreadValue = abs($fpiDiff);
+        $isHalf      = (floor($spreadValue) != $spreadValue);
+        $totalGames  = NflMargin::sum('occurrences');
 
-    /**
-     * Format a single casino's entry with spread and money line data
-     *
-     * @param \App\Models\Spread $spread
-     * @param \App\Models\MoneyLine|null $moneyLine
-     * @return array
-     */
-    private function formatCasinoEntry($spread, $moneyLine)
-    {
+        $homeWinProb = 50; // default
+        if ($fpiDiff < 0) {
+            // away favored
+            if ($isHalf) {
+                $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                    ->sum('occurrences');
+                $homeWinProb = 100 - ((($marginGames / 2) / $totalGames * 100) + 50);
+            } else {
+                $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                    ->sum('occurrences');
+                $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                    ->value('occurrences') ?? 0;
+                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
+                $homeWinProb   = 100 - ((($marginGames / 2) / $adjustedTotal * 100) + 50);
+            }
+        } else {
+            // home favored
+            if ($isHalf) {
+                $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                    ->sum('occurrences');
+                $homeWinProb = (($marginGames / 2) / $totalGames * 100) + 50;
+            } else {
+                $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                    ->sum('occurrences');
+                $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                    ->value('occurrences') ?? 0;
+                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
+                $homeWinProb   = (($marginGames / 2) / $adjustedTotal * 100) + 50;
+            }
+        }
+        $homeWinProb = round($homeWinProb, 1);
+
         return [
-            'spread' => [
-                'home' => [
-                    'line' => $spread->spread,
-                    'odds' => $spread->home_odds,
-                    'probability' => $spread->home_cover_probability_with_juice
-                ],
-                'away' => [
-                    'line' => -$spread->spread,
-                    'odds' => $spread->away_odds,
-                    'probability' => $spread->away_cover_probability_with_juice
-                ]
-            ],
-            'moneyLine' => [
-                'home' => [
-                    'odds' => $moneyLine ? $moneyLine->home_odds : null,
-                    'probability' => $moneyLine ? $moneyLine->home_implied_probability : null
-                ],
-                'away' => [
-                    'odds' => $moneyLine ? $moneyLine->away_odds : null,
-                    'probability' => $moneyLine ? $moneyLine->away_implied_probability : null
-                ]
-            ],
-            'updated_at' => $spread->recorded_at
+            'home_fpi'            => $homeTeamFpi->rating,
+            'away_fpi'            => $awayTeamFpi->rating,
+            'home_win_probability'=> $homeWinProb,
+            'away_win_probability'=> round(100 - $homeWinProb, 1),
         ];
     }
 
     private function transformCasinoData($game)
     {
         $casinoData = [];
+        // group each casino's spreads by casino_id
+        $groupedSpreads = $game->spreads
+            ->filter(fn($spread) => $spread->casino)
+            ->groupBy('casino_id');
 
-        // Only process spreads that have a corresponding casino
-        foreach ($game->spreads->filter(fn($spread) => $spread->casino)->groupBy('casino_id') as $casinoId => $casinoSpreads) {
+        foreach ($groupedSpreads as $casinoId => $casinoSpreads) {
+            // pick the most recent spread
             $spread = $casinoSpreads->sortByDesc('recorded_at')->first();
+
+            // find the corresponding moneyLine for that casino
             $moneyLine = $game->moneyLines
                 ->where('casino_id', $casinoId)
                 ->sortByDesc('recorded_at')
@@ -173,54 +160,73 @@ class GameTransformationService
         return $casinoData;
     }
 
+    private function formatCasinoEntry($spread, $moneyLine)
+    {
+        return [
+            'spread' => [
+                'home' => [
+                    'line'        => $spread->spread,
+                    'odds'        => $spread->home_odds,
+                    'probability' => $spread->home_cover_probability_with_juice,
+                ],
+                'away' => [
+                    'line'        => -$spread->spread,
+                    'odds'        => $spread->away_odds,
+                    'probability' => $spread->away_cover_probability_with_juice,
+                ],
+            ],
+            'moneyLine' => [
+                'home' => [
+                    'odds'        => $moneyLine ? $moneyLine->home_odds : null,
+                    'probability' => $moneyLine ? $moneyLine->home_implied_probability : null,
+                ],
+                'away' => [
+                    'odds'        => $moneyLine ? $moneyLine->away_odds : null,
+                    'probability' => $moneyLine ? $moneyLine->away_implied_probability : null,
+                ],
+            ],
+            'updated_at' => $spread->recorded_at,
+        ];
+    }
 
-    /**
-     * Calculate which casinos offer the best values for each team
-     *
-     * @param array $casinoData
-     * @return array
-     */
     private function calculateBestValues($casinoData)
     {
-        $lowestHomeProb = 100;
-        $lowestAwayProb = 100;
-        $bestHomeBook = null;
+        $lowestHomeProb  = 100;
+        $lowestAwayProb  = 100;
+        $bestHomeBook    = null;
         $bestHomeBetType = null;
-        $bestAwayBook = null;
+        $bestAwayBook    = null;
         $bestAwayBetType = null;
 
-        // Only process if we have casino data
         if (!empty($casinoData)) {
             foreach ($casinoData as $casinoName => $data) {
-                // Check home team probabilities
+                // 1) spread home
                 $homeSpreadProb = $data['spread']['home']['probability'] ?? 100;
                 if ($homeSpreadProb < $lowestHomeProb) {
-                    $lowestHomeProb = $homeSpreadProb;
-                    $bestHomeBook = $casinoName;
+                    $lowestHomeProb  = $homeSpreadProb;
+                    $bestHomeBook    = $casinoName;
                     $bestHomeBetType = 'spread';
                 }
-
-                if (isset($data['moneyLine']) &&
-                    isset($data['moneyLine']['home']['probability']) &&
-                    $data['moneyLine']['home']['probability'] < $lowestHomeProb) {
-                    $lowestHomeProb = $data['moneyLine']['home']['probability'];
-                    $bestHomeBook = $casinoName;
+                // 2) moneyLine home
+                $homeMlProb = $data['moneyLine']['home']['probability'] ?? 100;
+                if ($homeMlProb < $lowestHomeProb) {
+                    $lowestHomeProb  = $homeMlProb;
+                    $bestHomeBook    = $casinoName;
                     $bestHomeBetType = 'moneyline';
                 }
 
-                // Check away team probabilities
+                // 3) spread away
                 $awaySpreadProb = $data['spread']['away']['probability'] ?? 100;
                 if ($awaySpreadProb < $lowestAwayProb) {
-                    $lowestAwayProb = $awaySpreadProb;
-                    $bestAwayBook = $casinoName;
+                    $lowestAwayProb  = $awaySpreadProb;
+                    $bestAwayBook    = $casinoName;
                     $bestAwayBetType = 'spread';
                 }
-
-                if (isset($data['moneyLine']) &&
-                    isset($data['moneyLine']['away']['probability']) &&
-                    $data['moneyLine']['away']['probability'] < $lowestAwayProb) {
-                    $lowestAwayProb = $data['moneyLine']['away']['probability'];
-                    $bestAwayBook = $casinoName;
+                // 4) moneyLine away
+                $awayMlProb = $data['moneyLine']['away']['probability'] ?? 100;
+                if ($awayMlProb < $lowestAwayProb) {
+                    $lowestAwayProb  = $awayMlProb;
+                    $bestAwayBook    = $casinoName;
                     $bestAwayBetType = 'moneyline';
                 }
             }
@@ -229,12 +235,38 @@ class GameTransformationService
         return [
             'home' => [
                 'casino' => $bestHomeBook,
-                'type' => $bestHomeBetType
+                'type'   => $bestHomeBetType,
             ],
             'away' => [
                 'casino' => $bestAwayBook,
-                'type' => $bestAwayBetType
-            ]
+                'type'   => $bestAwayBetType,
+            ],
         ];
+    }
+
+    /**
+     * Calculate EV for either "home" or "away" team.
+     */
+    private function calculateEvValue(float $fpiProbability, array $casinoData, string $teamType): float
+    {
+        $lowestImpliedProbability = 100;
+
+        // For each casino, look ONLY at the side matching $teamType
+        foreach ($casinoData as $casinoName => $data) {
+            // Spread side
+            if (!empty($data['spread'][$teamType]['probability']) &&
+                $data['spread'][$teamType]['probability'] < $lowestImpliedProbability) {
+                $lowestImpliedProbability = $data['spread'][$teamType]['probability'];
+            }
+
+            // MoneyLine side
+            if (!empty($data['moneyLine'][$teamType]['probability']) &&
+                $data['moneyLine'][$teamType]['probability'] < $lowestImpliedProbability) {
+                $lowestImpliedProbability = $data['moneyLine'][$teamType]['probability'];
+            }
+        }
+
+        // EV = FPI% - lowest implied probability on that same side
+        return round($fpiProbability - $lowestImpliedProbability, 1);
     }
 }
