@@ -2,12 +2,32 @@
 
 namespace App\Services;
 
+use App\Models\NCAABMargin;
+use App\Models\NCAAFMargin;
 use App\Models\NflMargin;
 use Carbon\Carbon;
 use App\Models\Game;
 
 class GameTransformationService
 {
+    private $marginModel;
+    private $homeFieldAdvantage;
+
+    public function __construct($sport = 'nfl')
+    {
+        $this->setMarginModel($sport);
+        $this->setHomeFieldAdvantage($sport);
+    }
+
+    private function setHomeFieldAdvantage($sport)
+    {
+        $this->homeFieldAdvantage = match (strtolower($sport)) {
+            'nfl' => 2.0,
+            'ncaaf' => 2.5,
+            'ncaab' => 3.5,
+            default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
+        };
+    }
     public function transformGames($games)
     {
         return $games->map(function ($game) {
@@ -89,7 +109,7 @@ class GameTransformationService
             ];
         }
 
-        $fpiDiff     = $homeTeamFpi->rating - $awayTeamFpi->rating + 2;
+        $fpiDiff     = $homeTeamFpi->rating - $awayTeamFpi->rating + $this->homeFieldAdvantage;
         $spreadValue = abs($fpiDiff);
         $isHalf      = (floor($spreadValue) != $spreadValue);
         $totalGames  = NflMargin::sum('occurrences');
@@ -268,5 +288,15 @@ class GameTransformationService
 
         // EV = FPI% - lowest implied probability on that same side
         return round($fpiProbability - $lowestImpliedProbability, 1);
+    }
+
+    private function setMarginModel($sport)
+    {
+        $this->marginModel = match (strtolower($sport)) {
+            'nfl' => NflMargin::class,
+            'ncaaf' => NCAAFMargin::class,
+            'ncaab' => NCAABMargin::class,
+            default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
+        };
     }
 }

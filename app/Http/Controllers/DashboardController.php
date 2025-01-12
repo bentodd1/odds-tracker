@@ -11,22 +11,19 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    protected $gameTransformationService;
-
     /**
      * Create a new controller instance.
-     *
-     * @param GameTransformationService $gameTransformationService
      */
-    public function __construct(GameTransformationService $gameTransformationService)
+    public function __construct()
     {
-        $this->gameTransformationService = $gameTransformationService;
+        // Remove service injection since we'll create sport-specific instances
     }
 
     /**
      * Get filtered and transformed games for a specific sport
      *
      * @param string $sportTitle
+     * @param array $casinoNames
      * @return \Illuminate\Support\Collection
      */
     private function getFilteredGames(string $sportTitle, array $casinoNames = ['draftkings', 'fanduel', 'betmgm'])
@@ -63,7 +60,9 @@ class DashboardController extends Controller
             ->select('games.*')
             ->get();
 
-        return $this->gameTransformationService->transformGames($games);
+        // Create sport-specific transformation service
+        $transformationService = new GameTransformationService(strtolower($sportTitle));
+        return $transformationService->transformGames($games);
     }
 
     /**
@@ -86,54 +85,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Display NBA games dashboard
-     *
-     * @return View
-     */
-    public function nba(): View
-    {
-        $games = $this->getFilteredGames('nba');
-        return view('dashboard.coming-soon', [
-            'games' => $games,
-            'sport' => 'NBA'
-        ]);
-    }
-
-    /**
-     * Display MLB games dashboard
-     *
-     * @return View
-     */
-    public function mlb(): View
-    {
-        $games = $this->getFilteredGames('mlb');
-        return view('dashboard.coming-soon', [
-            'games' => $games,
-            'sport' => 'MLB'
-        ]);
-    }
-
-    /**
-     * Display NHL games dashboard
-     *
-     * @return View
-     */
-    public function nhl(): View
-    {
-        $games = $this->getFilteredGames('nhl');
-        return view('dashboard.coming-soon', [
-            'games' => $games,
-            'sport' => 'NHL'
-        ]);
-    }
-
-    /**
-     * Display NCAAF games dashboard
-     *
-     * @return View
-     */
-
-    /**
      * Display NCAAF games dashboard
      *
      * @param Request $request
@@ -152,7 +103,81 @@ class DashboardController extends Controller
         ]);
     }
 
+    /**
+     * Display NCAAB games dashboard
+     *
+     * @param Request $request
+     * @return View
+     */
+    public function ncaab(Request $request): View
+    {
+        $casinos = $this->getCasinos($request);
+        $games = $this->getFilteredGames('ncaab', $casinos['selectedCasinos']);
 
+        return view('dashboard.ncaab', [
+            'games' => $games,
+            'sport' => 'NCAAB',
+            'availableCasinos' => $casinos['availableCasinos'],
+            'selectedCasinos' => $casinos['selectedCasinos']
+        ]);
+    }
+
+    /**
+     * Display NBA games dashboard
+     *
+     * @param Request $request
+     * @return View
+     */
+    public function nba(Request $request): View
+    {
+        $casinos = $this->getCasinos($request);
+        $games = $this->getFilteredGames('nba', $casinos['selectedCasinos']);
+
+        return view('dashboard.coming-soon', [
+            'games' => $games,
+            'sport' => 'NBA',
+            'availableCasinos' => $casinos['availableCasinos'],
+            'selectedCasinos' => $casinos['selectedCasinos']
+        ]);
+    }
+
+    /**
+     * Display MLB games dashboard
+     *
+     * @param Request $request
+     * @return View
+     */
+    public function mlb(Request $request): View
+    {
+        $casinos = $this->getCasinos($request);
+        $games = $this->getFilteredGames('mlb', $casinos['selectedCasinos']);
+
+        return view('dashboard.coming-soon', [
+            'games' => $games,
+            'sport' => 'MLB',
+            'availableCasinos' => $casinos['availableCasinos'],
+            'selectedCasinos' => $casinos['selectedCasinos']
+        ]);
+    }
+
+    /**
+     * Display NHL games dashboard
+     *
+     * @param Request $request
+     * @return View
+     */
+    public function nhl(Request $request): View
+    {
+        $casinos = $this->getCasinos($request);
+        $games = $this->getFilteredGames('nhl', $casinos['selectedCasinos']);
+
+        return view('dashboard.coming-soon', [
+            'games' => $games,
+            'sport' => 'NHL',
+            'availableCasinos' => $casinos['availableCasinos'],
+            'selectedCasinos' => $casinos['selectedCasinos']
+        ]);
+    }
 
     /**
      * Get available and selected casinos
@@ -188,5 +213,4 @@ class DashboardController extends Controller
             'selectedCasinos' => $selectedCasinos
         ];
     }
-
 }

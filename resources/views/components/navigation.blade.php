@@ -14,6 +14,10 @@
                    class="{{ $currentPage === 'ncaaf' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
                     NCAAF
                 </a>
+                <a href="{{ route('dashboard.ncaab') }}"
+                   class="{{ $currentPage === 'ncaab' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
+                    NCAAB
+                </a>
                 <a href="{{ route('dashboard.nba') }}"
                    class="{{ $currentPage === 'nba' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
                     NBA
@@ -26,6 +30,7 @@
                    class="{{ $currentPage === 'nhl' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
                     NHL
                 </a>
+
             </div>
         </div>
     </div>
