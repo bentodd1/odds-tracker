@@ -84,12 +84,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Display NCAAF games dashboard
-     *
-     * @param Request $request
-     * @return View
-     */
     public function ncaaf(Request $request): View
     {
         $casinos = $this->getCasinos($request);
@@ -97,18 +91,12 @@ class DashboardController extends Controller
 
         return view('dashboard.ncaaf', [
             'games' => $games,
-            'sport' => 'NCAAF',
+            'sport' => 'ncaaf',  // Make sure this is set
             'availableCasinos' => $casinos['availableCasinos'],
             'selectedCasinos' => $casinos['selectedCasinos']
         ]);
     }
 
-    /**
-     * Display NCAAB games dashboard
-     *
-     * @param Request $request
-     * @return View
-     */
     public function ncaab(Request $request): View
     {
         $casinos = $this->getCasinos($request);
@@ -116,12 +104,11 @@ class DashboardController extends Controller
 
         return view('dashboard.ncaab', [
             'games' => $games,
-            'sport' => 'NCAAB',
+            'sport' => 'ncaab',  // Make sure this is set
             'availableCasinos' => $casinos['availableCasinos'],
             'selectedCasinos' => $casinos['selectedCasinos']
         ]);
     }
-
     /**
      * Display NBA games dashboard
      *
@@ -133,7 +120,7 @@ class DashboardController extends Controller
         $casinos = $this->getCasinos($request);
         $games = $this->getFilteredGames('nba', $casinos['selectedCasinos']);
 
-        return view('dashboard.coming-soon', [
+        return view('dashboard.nba', [
             'games' => $games,
             'sport' => 'NBA',
             'availableCasinos' => $casinos['availableCasinos'],

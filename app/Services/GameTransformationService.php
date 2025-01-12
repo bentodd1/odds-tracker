@@ -5,8 +5,7 @@ namespace App\Services;
 use App\Models\NCAABMargin;
 use App\Models\NCAAFMargin;
 use App\Models\NflMargin;
-use Carbon\Carbon;
-use App\Models\Game;
+
 
 class GameTransformationService
 {
@@ -25,6 +24,7 @@ class GameTransformationService
             'nfl' => 2.0,
             'ncaaf' => 2.5,
             'ncaab' => 3.5,
+            'nba' => 3.5,
             default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
         };
     }
@@ -296,6 +296,7 @@ class GameTransformationService
             'nfl' => NflMargin::class,
             'ncaaf' => NCAAFMargin::class,
             'ncaab' => NCAABMargin::class,
+            'nba' => NCAABMargin::class,
             default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
         };
     }

@@ -1,7 +1,6 @@
-{{-- resources/views/dashboard/ncaaf.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'NCAAF Odds Dashboard')
+@section('title', 'NBA Odds Dashboard')
 
 @section('content')
     <div class="container mx-auto px-4 py-8">
