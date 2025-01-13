@@ -16,4 +16,6 @@ app(Schedule::class)->command('odds:fetch-current basketball_nba')->everyFifteen
 app(Schedule::class)->command('espn:fetch-fpi')->daily();
 app(Schedule::class)->command('espn:fetch-college-fpi')->daily();
 app(Schedule::class)->command('espn:fetch-college-basketball-bpi ')->daily();
+app(Schedule::class)->command('espn:fetch-nba-bpi ')->daily();
+
 
