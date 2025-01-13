@@ -59,8 +59,31 @@ class FetchNBABpi extends Command
                 }
 
                 $teamName = trim($teamNode->textContent);
-                // Remove common NBA suffixes for better matching
-                $teamName = str_replace([' Lakers', ' Celtics', ' Warriors', ' Nets', ' Heat', ' Knicks'], '', $teamName);
+                // Store original team name before modifications
+                $originalTeamName = $teamName;
+                
+                // More specific team name mapping
+                $teamMappings = [
+                    'LA Lakers' => 'Los Angeles Lakers',
+                    'LA Clippers' => 'Los Angeles Clippers',
+                    'NY Knicks' => 'New York Knicks',
+                    'GS Warriors' => 'Golden State Warriors',
+                ];
+                
+                $teamName = $teamMappings[$teamName] ?? $teamName;
+
+                // Find team in database with more precise matching
+                $team = Team::where(function ($query) use ($teamName, $originalTeamName) {
+                    $query->where('name', $teamName)
+                          ->orWhere('name', $originalTeamName);
+                })->first();
+
+                if (!$team) {
+                    if ($debug) {
+                        $this->warn("Team not found in database: {$teamName} (Original: {$originalTeamName})");
+                    }
+                    continue;
+                }
 
                 // Get corresponding data row
                 $dataRow = $dataRows->item($index);
@@ -93,18 +116,6 @@ class FetchNBABpi extends Command
                 if (!is_numeric($bpiValue)) {
                     if ($debug) {
                         $this->warn("Invalid BPI value for {$teamName}: {$bpiValue}");
-                    }
-                    continue;
-                }
-
-                // Find team in database
-                $team = Team::where('name', $teamName)
-                    ->orWhere('name', 'LIKE', "%{$teamName}%")
-                    ->first();
-
-                if (!$team) {
-                    if ($debug) {
-                        $this->warn("Team not found in database: {$teamName}");
                     }
                     continue;
                 }
