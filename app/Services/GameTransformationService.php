@@ -112,19 +112,19 @@ class GameTransformationService
         $fpiDiff     = $homeTeamFpi->rating - $awayTeamFpi->rating + $this->homeFieldAdvantage;
         $spreadValue = abs($fpiDiff);
         $isHalf      = (floor($spreadValue) != $spreadValue);
-        $totalGames  = NflMargin::sum('occurrences');
+        $totalGames  = $this->marginModel::sum('occurrences');
 
         $homeWinProb = 50; // default
         if ($fpiDiff < 0) {
             // away favored
             if ($isHalf) {
-                $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                $marginGames = $this->marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
                 $homeWinProb = 100 - ((($marginGames / 2) / $totalGames * 100) + 50);
             } else {
-                $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                $marginGames = $this->marginModel::where('margin', '<=', $spreadValue - 1)
                     ->sum('occurrences');
-                $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                $currentMarginGames = $this->marginModel::where('margin', '=', $spreadValue)
                     ->value('occurrences') ?? 0;
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
                 $homeWinProb   = 100 - ((($marginGames / 2) / $adjustedTotal * 100) + 50);
@@ -132,13 +132,13 @@ class GameTransformationService
         } else {
             // home favored
             if ($isHalf) {
-                $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                $marginGames = $this->marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
                 $homeWinProb = (($marginGames / 2) / $totalGames * 100) + 50;
             } else {
-                $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                $marginGames = $this->marginModel::where('margin', '<=', $spreadValue - 1)
                     ->sum('occurrences');
-                $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                $currentMarginGames = $this->marginModel::where('margin', '=', $spreadValue)
                     ->value('occurrences') ?? 0;
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
                 $homeWinProb   = (($marginGames / 2) / $adjustedTotal * 100) + 50;
