@@ -23,8 +23,8 @@ class GameTransformationService
         $this->homeFieldAdvantage = match (strtolower($sport)) {
             'nfl' => 2.0,
             'ncaaf' => 2.5,
-            'ncaab' => 3.5,
-            'nba' => 3.5,
+            'ncaab' => 4.5,
+            'nba' => 2.4,
             default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
         };
     }
