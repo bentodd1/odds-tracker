@@ -20,6 +20,29 @@ class DashboardController extends Controller
     }
 
     /**
+     * Calculate game weight based on team BPI ratings and time to game
+     *
+     * @param float $homeBpi
+     * @param float $awayBpi
+     * @param Carbon $commenceTime
+     * @return float
+     */
+    private function calculateGameWeight(float $homeBpi, float $awayBpi, Carbon $commenceTime): float
+    {
+        $combinedBpi = $homeBpi + $awayBpi;
+        $hoursUntilGame = now()->diffInHours($commenceTime);
+        
+        $timeMultiplier = match(true) {
+            $hoursUntilGame <= 24 => 1.5,  // Next 24 hours
+            $hoursUntilGame <= 48 => 1.25, // 1-2 days away
+            $hoursUntilGame <= 72 => 1.1,  // 2-3 days away
+            default => 1.0
+        };
+
+        return $combinedBpi * $timeMultiplier;
+    }
+
+    /**
      * Get filtered and transformed games for a specific sport
      *
      * @param string $sportTitle
@@ -58,7 +81,19 @@ class DashboardController extends Controller
             ->orderBy('commence_time', 'asc')
             ->take(30)
             ->select('games.*')
-            ->get();
+            ->get()
+            ->map(function($game) {
+                $homeBpi = $game->homeTeam->latestFpi?->rating ?? 0;
+                $awayBpi = $game->awayTeam->latestFpi?->rating ?? 0;
+                
+                $game->weight = $this->calculateGameWeight(
+                    $homeBpi,
+                    $awayBpi,
+                    $game->commence_time
+                );
+                return $game;
+            })
+            ->sortByDesc('weight');
 
         // Create sport-specific transformation service
         $transformationService = new GameTransformationService(strtolower($sportTitle));
