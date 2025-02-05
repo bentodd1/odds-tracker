@@ -87,8 +87,12 @@ class FetchEspnFpi extends Command
                     continue;
                 }
 
-                // Find team in database
-                $team = Team::where('name', $teamName)->first();
+                // Find team in database with NFL sport filter
+                $team = Team::whereHas('sport', function($query) {
+                    $query->where('title', 'NFL');
+                })
+                ->where('name', $teamName)
+                ->first();
                 if (!$team) {
                     if ($debug) {
                         $this->warn("Team not found in database: {$teamName}");

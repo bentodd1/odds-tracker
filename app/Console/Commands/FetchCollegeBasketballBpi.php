@@ -108,14 +108,19 @@ class FetchCollegeBasketballBpi extends Command
                         continue;
                     }
 
-                    // Find team in database
-                    $team = Team::where('name', $teamName)
-                        ->orWhere('name', 'LIKE', "%{$teamName}%")
-                        ->first();
+                    // Find team in database - updated to only match NCAAB teams
+                    $team = Team::whereHas('sport', function($query) {
+                        $query->where('title', 'NCAAB');
+                    })
+                    ->where(function ($query) use ($teamName) {
+                        $query->where('name', $teamName)
+                            ->orWhere('name', 'LIKE', "%{$teamName}%");
+                    })
+                    ->first();
 
                     if (!$team) {
                         if ($debug) {
-                            $this->warn("Team not found in database: {$teamName}");
+                            $this->warn("NCAAB team not found in database: {$teamName}");
                         }
                         continue;
                     }

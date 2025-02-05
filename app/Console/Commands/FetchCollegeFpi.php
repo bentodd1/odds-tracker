@@ -95,10 +95,14 @@ class FetchCollegeFpi extends Command
                     continue;
                 }
 
-                // Find team in database
-                $team = Team::where('name', $teamName)
-                    ->orWhere('name', 'LIKE', "%{$teamName}%") // More flexible matching for college teams
-                    ->first();
+                // Find team in database with NCAAF sport filter
+                $team = Team::whereHas('sport', function($query) {
+                    $query->where('title', 'NCAAF');
+                })
+                ->where(function ($query) use ($teamName) {
+                    $query->where('name', $teamName)
+                        ->orWhere('name', 'LIKE', "%{$teamName}%");
+                })->first();
 
                 if (!$team) {
                     if ($debug) {

@@ -72,8 +72,11 @@ class FetchNBABpi extends Command
                 
                 $teamName = $teamMappings[$teamName] ?? $teamName;
 
-                // Find team in database with more precise matching
-                $team = Team::where(function ($query) use ($teamName, $originalTeamName) {
+                // Find team in database with more precise matching and NBA sport filter
+                $team = Team::whereHas('sport', function($query) {
+                    $query->where('title', 'NBA');
+                })
+                ->where(function ($query) use ($teamName, $originalTeamName) {
                     $query->where('name', $teamName)
                           ->orWhere('name', $originalTeamName);
                 })->first();
