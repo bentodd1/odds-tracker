@@ -12,303 +12,155 @@ use DOMXPath;
 
 class FetchCollegeBasketballBpi extends Command
 {
-    protected $signature = 'fetch:college-basketball-bpi {--debug} {--group=}';
-    protected $description = 'Fetch College Basketball BPI ratings from ESPN';
-    
-    // Add protected property for debug
-    protected $debug = false;
-
-    private $teamMappings = [
-        // ACC Teams
-        'Virginia Cavaliers' => 'Virginia Cavaliers',
-        'Miami Hurricanes' => 'Miami (FL) Hurricanes',  // Distinguish from Miami (OH)
-        
-        // America East Teams
-        'Vermont Catamounts' => 'Vermont Catamounts',
-        'UAlbany Great Danes' => 'Albany Great Danes',  // UAlbany -> Albany
-        
-        // Patriot League Teams
-        'Colgate Raiders' => 'Colgate Raiders',
-        'American University Eagles' => 'American Eagles',
-        'Navy Midshipmen' => 'Navy Midshipmen',
-        'Lehigh Mountain Hawks' => 'Lehigh Mountain Hawks',
-        'Boston University Terriers' => 'Boston Univ. Terriers',
-        'Army Black Knights' => 'Army Knights',
-        'Loyola Maryland Greyhounds' => 'Loyola (MD) Greyhounds',
-        
-        // Simple names that need exact mapping
-        'Tennessee' => 'Tennessee Volunteers',
-        'Alabama' => 'Alabama Crimson Tide',
-        'Missouri' => 'Missouri Tigers',
-        'Auburn' => 'Auburn Tigers',
-        'LSU' => 'LSU Tigers',
-        'Memphis' => 'Memphis Tigers',
-        'Pacific' => 'Pacific Tigers',
-        'Houston' => 'Houston Cougars',
-        'BYU' => 'BYU Cougars',
-        'Texas Southern' => 'Texas Southern Tigers',
-        'Kansas' => 'Kansas Jayhawks',
-        'Kansas State' => 'Kansas St Wildcats',
-        'Arizona State' => 'Arizona St Sun Devils',
-        'Oregon State' => 'Oregon St Beavers',
-        'Mississippi State' => 'Mississippi St Bulldogs',
-        'Florida State' => 'Florida St Seminoles',
-        'Oklahoma State' => 'Oklahoma St Cowboys',
-        'Michigan State' => 'Michigan St Spartans',
-        'CSU Fullerton' => 'Cal State Fullerton Titans',
-        'CSU Bakersfield' => 'CSU Bakersfield Roadrunners',
-        'CSU Northridge' => 'CSU Northridge Matadors',
-        'San José State' => 'San José St Spartans',
-        'Fresno State' => 'Fresno St Bulldogs',
-        'Boise State' => 'Boise St Broncos',
-        'Mississippi Valley State' => 'Mississippi Valley St Delta Devils',
-        'Sacramento State' => 'Sacramento St Hornets',
-        'Portland State' => 'Portland St Vikings',
-        'Weber State' => 'Weber St Wildcats',
-        'Montana State' => 'Montana St Bobcats',
-        'Idaho State' => 'Idaho St Bengals',
-        'Illinois State' => 'Illinois St Redbirds',
-        'Indiana State' => 'Indiana St Sycamores',
-        'Ball State' => 'Ball St Cardinals',
-        'Kent State' => 'Kent St Golden Flashes',
-        
-        // Directional Schools
-        'South Carolina' => 'South Carolina Gamecocks',
-        'North Carolina' => 'North Carolina Tar Heels',
-        'South Florida' => 'South Florida Bulls',
-        'North Florida' => 'North Florida Ospreys',
-        'South Alabama' => 'South Alabama Jaguars',
-        'North Alabama' => 'North Alabama Lions',
-        'East Carolina' => 'East Carolina Pirates',
-        'Western Carolina' => 'Western Carolina Catamounts',
-        'Eastern Michigan' => 'Eastern Michigan Eagles',
-        'Western Michigan' => 'Western Michigan Broncos',
-        'Northern Illinois' => 'Northern Illinois Huskies',
-        'Southern Illinois' => 'Southern Illinois Salukis',
-        'Southeast Missouri State' => 'Southeast Missouri St Redhawks',
-        
-        // Special Cases
-        'Little Rock Trojans' => 'Arkansas-Little Rock Trojans',
-        'Central Connecticut' => 'Central Connecticut St Blue Devils',
-        'UL Monroe' => 'UL Monroe Warhawks',
-        'Louisiana' => 'Louisiana Ragin\' Cajuns',
-        'UNC Wilmington' => 'UNC Wilmington Seahawks',
-        'UTEP' => 'Texas-El Paso Miners',
-        'UTSA' => 'UTSA Roadrunners',
-        'UMass Lowell' => 'UMass-Lowell River Hawks',
-        'Saint Joseph\'s' => 'Saint Joseph\'s Hawks',
-        'Saint Francis' => 'St. Francis (PA) Red Flash',
-        'Mount St. Mary\'s' => 'Mt. St. Mary\'s Mountaineers',
-        'Loyola Chicago' => 'Loyola (Chi) Ramblers',
-        'Loyola Maryland' => 'Loyola (MD) Greyhounds',
-        'Purdue Fort Wayne' => 'Fort Wayne Mastodons',
-        'George Washington' => 'GW Revolutionaries',
-        
-        // Keep existing base mappings
-        'Missouri St' => 'Missouri St',
-        'Wright St' => 'Wright St',
-        'Georgia St' => 'Georgia St',
-        'Appalachian St' => 'Appalachian St',
-        'Cleveland St' => 'Cleveland St',
-        'Boston Univ.' => 'Boston Univ.',
-        
-        // Conference USA and Similar
-        'Florida Atlantic' => 'Florida Atlantic Owls',
-        'Florida International' => 'FIU Panthers',
-        'Western Kentucky' => 'Western Kentucky Hilltoppers',
-        'Middle Tennessee' => 'Middle Tennessee Blue Raiders',
-        
-        // Military Academies - Updated with full names
-        'Army' => 'Army Knights',
-        'Army West Point' => 'Army Knights',
-        'Air Force' => 'Air Force Falcons',
-        'Navy' => 'Navy Midshipmen',
-        
-        // Common Abbreviations
-        'UNLV' => 'UNLV Rebels',
-        'UCF' => 'UCF Knights',
-        'VCU' => 'VCU Rams',
-        'SMU' => 'SMU Mustangs',
-        'USC' => 'USC Trojans',
-        'UCLA' => 'UCLA Bruins',
-        'UAB' => 'UAB Blazers',
-        'UIC' => 'UIC Flames',
-        'VMI' => 'VMI Keydets',
-    ];
-
-    private $suffixesToRemove = [
-        ' Cougars',
-        ' Panthers',
-        ' Bears',
-        ' Jaguars',
-        ' Raiders',
-        ' Mastodons',
-        ' Sycamores',
-        ' Terriers',
-        ' Vikings',
-        ' Mountaineers',
-        ' Knights',
-        ' Blue Devils',
-        ' Crimson Tide',
-        ' Volunteers',
-        ' Tigers',
-        ' Cyclones',
-        ' Wildcats',
-        ' Bulldogs',
-        ' Cardinals',
-        ' Eagles',
-        ' Huskies',
-        ' Aggies',
-        ' Rams',
-        ' Owls',
-        ' Colonials',
-        ' Pioneers',
-        ' Flames',
-        ' Dukes',
-        ' Gaels',
-        ' Broncos',
-        ' Spartans',
-        ' Hoyas',
-        ' Bluejays',
-        ' Peacocks',
-        ' Red Hawks',
-        ' Bobcats',
-        ' Seahawks',
-        ' Wolf Pack',
-        ' Demon Deacons',
-        ' Fighting Irish',
-        ' Boilermakers',
-        ' Cornhuskers',
-        ' Razorbacks',
-        ' Commodores',
-        ' Golden Eagles',
-        ' Red Storm',
-        ' Fighting Illini',
-        ' Hoosiers',
-        ' Hawkeyes',
-        ' Jayhawks',
-        ' Wolverines',
-        ' Buckeyes',
-        ' Sooners',
-        ' Ducks',
-        ' Nittany Lions',
-        ' Gamecocks',
-        ' Longhorns',
-        ' Cavaliers',
-    ];
-
-    private function normalizeTeamName($name)
-    {
-        if ($this->debug) {
-            $this->info("Normalizing team name: " . $name);
-        }
-
-        // Check direct mappings first
-        if (isset($this->teamMappings[$name])) {
-            if ($this->debug) {
-                $this->info("Found direct mapping for: " . $name . " => " . $this->teamMappings[$name]);
-            }
-            return $this->teamMappings[$name];
-        }
-        
-        // Return original name if no mapping found
-        return trim($name);
-    }
+    protected $signature = 'espn:fetch-college-basketball-bpi {--debug : Show debug information}';
+    protected $description = 'Fetch BPI (Basketball Power Index) ratings from ESPN for college basketball teams';
 
     public function handle()
     {
-        // Set debug flag at the start
-        $this->debug = $this->option('debug');
-        
         $this->info('Fetching ESPN College Basketball BPI ratings...');
-        $group = $this->option('group');
+        $debug = $this->option('debug');
+        $timestamp = now();
+        $latestRevision = FpiRating::max('revision') ?? 0;
+        $newRevision = $latestRevision + 1;
+        $count = 0;
 
         try {
-            $url = 'https://www.espn.com/mens-college-basketball/bpi';
-            if ($group) {
-                $url .= '/_/group/' . $group;
-                $this->info("Fetching group $group from: $url");
-            }
+            // Delete any existing ratings for this revision (in case of partial runs)
+            FpiRating::where('revision', $newRevision)->delete();
 
-            $response = Http::get($url);
-            $html = $response->body();
+            // Track processed teams to avoid duplicates
+            $processedTeams = [];
 
-            if ($this->debug) {
-                $this->info("\nSaving response to storage/app/debug_ncaab_group_$group.html");
-                file_put_contents(storage_path("app/debug_ncaab_group_$group.html"), $html);
-            }
-
-            $doc = new DOMDocument();
-            @$doc->loadHTML($html);
-            $xpath = new DOMXPath($doc);
-
-            // Get all team nodes
-            $teamNodes = $xpath->query("//div[contains(@class, 'TeamCell')]//span[contains(@class, 'TeamLink__Name')]//a");
-            
-            if ($this->debug) {
-                $this->info("\nFound " . $teamNodes->length . " teams in response");
-                $this->info("\nTeam nodes found:");
-                foreach ($teamNodes as $node) {
-                    $this->info("Raw team name: " . $node->textContent);
-                }
-            }
-
-            $teams = [];
-            foreach ($teamNodes as $teamNode) {
-                $teamName = trim($teamNode->textContent);
-                $normalizedName = $this->normalizeTeamName($teamName);
-                
-                if ($this->debug) {
-                    $this->info("\nProcessing team:");
-                    $this->info("ESPN Team Name: " . $teamName);
-                    $this->info("Normalized Name: " . $normalizedName);
+            // Loop through groups 1-100
+            for ($group = 1; $group <= 100; $group++) {
+                if ($debug) {
+                    $this->info("\nFetching group {$group}...");
                 }
 
-                // Find matching team in database
-                $team = Team::whereHas('sport', function($query) {
-                    $query->where('title', 'NCAAB');
-                })->where(function($query) use ($normalizedName) {
-                    $query->where('name', 'LIKE', '%' . $normalizedName . '%')
-                        ->orWhere('name', 'LIKE', '%' . str_replace(' ', '%', $normalizedName) . '%');
-                })->first();
+                $response = Http::get("https://www.espn.com/mens-college-basketball/bpi/_/group/{$group}");
+                $html = $response->body();
 
-                if ($this->debug) {
-                    if ($team) {
-                        $this->info("Found match: " . $team->name);
-                    } else {
-                        $this->error("No match found in database for: " . $normalizedName);
-                        
-                        // Show potential close matches
-                        $potentialMatches = Team::whereHas('sport', function($query) {
-                            $query->where('title', 'NCAAB');
-                        })->where('name', 'LIKE', '%' . explode(' ', $normalizedName)[0] . '%')->get();
-                        
-                        if ($potentialMatches->count() > 0) {
-                            $this->info("Potential matches found:");
-                            foreach ($potentialMatches as $match) {
-                                $this->info("- " . $match->name);
-                            }
+                if ($debug) {
+                    file_put_contents(storage_path("app/debug_college_bball_group_{$group}.html"), $html);
+                    $this->info("Saved ESPN response to storage/app/debug_college_bball_group_{$group}.html");
+                }
+
+                $doc = new DOMDocument();
+                @$doc->loadHTML($html);
+                $xpath = new DOMXPath($doc);
+
+                // Get teams from the fixed left table
+                $teamRows = $xpath->query("//table[contains(@class, 'Table--fixed-left')]//tr[contains(@class, 'Table__TR--sm')]");
+
+                // Get BPI data from the scrollable table
+                $dataRows = $xpath->query("//div[contains(@class, 'Table__ScrollerWrapper')]//tr[contains(@class, 'Table__TR--sm')]");
+
+                if ($debug) {
+                    $this->info("Found " . $teamRows->length . " team rows and " . $dataRows->length . " data rows in group {$group}");
+                }
+
+                foreach ($teamRows as $index => $teamRow) {
+                    // Get team name from the first table
+                    $teamNode = $xpath->query(".//span[contains(@class, 'TeamLink__Name')]//a", $teamRow)->item(0);
+                    if (!$teamNode) {
+                        if ($debug) {
+                            $this->warn("No team found in row {$index}");
+                        }
+                        continue;
+                    }
+
+                    $teamName = trim($teamNode->textContent);
+                    // Remove common suffixes for better matching
+                    $teamName = str_replace([' Blue Devils', ' Crimson Tide', ' Volunteers', ' Tigers', ' Cyclones', ' Cougars'], '', $teamName);
+
+                    // Get corresponding data row
+                    $dataRow = $dataRows->item($index);
+                    if (!$dataRow) {
+                        if ($debug) {
+                            $this->warn("No data row found for {$teamName}");
+                        }
+                        continue;
+                    }
+
+                    // Get cells from data row
+                    $cells = $xpath->query(".//td[contains(@class, 'Table__TD')]", $dataRow);
+
+                    if ($debug) {
+                        for ($i = 0; $i < $cells->length; $i++) {
+                            $this->info("Cell {$i} content for {$teamName}: " . trim($cells->item($i)->textContent));
                         }
                     }
-                }
 
-                if ($team) {
-                    $teams[] = [
+                    // BPI is in the second cell (index 1) for basketball
+                    $bpiCell = $cells->item(1);
+                    if (!$bpiCell) {
+                        if ($debug) {
+                            $this->warn("No BPI cell found for {$teamName}");
+                        }
+                        continue;
+                    }
+
+                    $bpiValue = trim($bpiCell->textContent);
+                    if (!is_numeric($bpiValue)) {
+                        if ($debug) {
+                            $this->warn("Invalid BPI value for {$teamName}: {$bpiValue}");
+                        }
+                        continue;
+                    }
+
+                    // Find team in database - updated to only match NCAAB teams
+                    $team = Team::whereHas('sport', function($query) {
+                        $query->where('title', 'NCAAB');
+                    })
+                    ->where(function ($query) use ($teamName) {
+                        $query->where('name', $teamName)
+                            ->orWhere('name', 'LIKE', "%{$teamName}%");
+                    })
+                    ->first();
+
+                    if (!$team) {
+                        if ($debug) {
+                            $this->warn("NCAAB team not found in database: {$teamName}");
+                        }
+                        continue;
+                    }
+
+                    if ($debug) {
+                        $this->info("Creating BPI rating: {$teamName} = {$bpiValue}");
+                    }
+
+                    // Skip if we've already processed this team
+                    if (isset($processedTeams[$team->id])) {
+                        if ($debug) {
+                            $this->warn("Skipping duplicate team: {$teamName}");
+                        }
+                        continue;
+                    }
+
+                    // Create new FPI/BPI rating
+                    FpiRating::create([
                         'team_id' => $team->id,
-                        'espn_name' => $teamName,
-                        'normalized_name' => $normalizedName
-                    ];
+                        'rating' => $bpiValue,
+                        'revision' => $newRevision,
+                        'recorded_at' => $timestamp
+                    ]);
+
+                    // Mark team as processed
+                    $processedTeams[$team->id] = true;
+                    $count++;
                 }
             }
 
-            // ... rest of the code ...
+            $this->info("\n✓ Processed {$count} unique teams total");
 
         } catch (\Exception $e) {
-            $this->error("Error: " . $e->getMessage());
-            if ($this->debug) {
+            $this->error("✗ Error: " . $e->getMessage());
+            if ($debug) {
                 $this->error($e->getTraceAsString());
             }
             return 1;
         }
+
+        return 0;
     }
 }
