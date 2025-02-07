@@ -72,6 +72,11 @@ class FetchCollegeBasketballBpi extends Command
                     $teamName = trim($teamNode->textContent);
                     // Remove common suffixes for better matching
                     $teamName = str_replace([' Blue Devils', ' Crimson Tide', ' Volunteers', ' Tigers', ' Cyclones', ' Cougars'], '', $teamName);
+                    
+                    // Normalize St./Saint/State variations
+                    $teamName = preg_replace('/\bSt\.\s+/', 'Saint ', $teamName);
+                    $teamName = preg_replace('/\bSt\s+/', 'Saint ', $teamName);
+                    $teamName = preg_replace('/\bState\b/', 'St', $teamName);
 
                     // Get corresponding data row
                     $dataRow = $dataRows->item($index);
@@ -108,13 +113,19 @@ class FetchCollegeBasketballBpi extends Command
                         continue;
                     }
 
-                    // Find team in database - updated to only match NCAAB teams
+                    // Find team in database - updated to handle St/State variations
                     $team = Team::whereHas('sport', function($query) {
                         $query->where('title', 'NCAAB');
                     })
                     ->where(function ($query) use ($teamName) {
+                        $normalizedName = str_replace(['Saint ', 'St '], ['St. ', 'St. '], $teamName);
+                        
                         $query->where('name', $teamName)
-                            ->orWhere('name', 'LIKE', "%{$teamName}%");
+                            ->orWhere('name', 'LIKE', "%{$teamName}%")
+                            ->orWhere('name', $normalizedName)
+                            ->orWhere('name', 'LIKE', "%{$normalizedName}%")
+                            ->orWhere('name', str_replace('Saint ', 'St. ', $teamName))
+                            ->orWhere('name', str_replace('St ', 'St. ', $teamName));
                     })
                     ->first();
 
