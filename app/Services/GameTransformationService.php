@@ -43,7 +43,7 @@ class GameTransformationService
         // 2) Gather odds data (spreads & moneyLines by casino)
         $casinoData = $this->transformCasinoData($game);
 
-        // 3) Determine the “best value” cells (highlighted in green)
+        // 3) Determine the "best value" cells (highlighted in green)
         $bestValues = $this->calculateBestValues($casinoData);
 
         // 4) Calculate EV separately for home & away
@@ -109,7 +109,7 @@ class GameTransformationService
             ];
         }
 
-        $fpiDiff     = $homeTeamFpi->rating - $awayTeamFpi->rating + $this->homeFieldAdvantage;
+        $fpiDiff     = $homeTeamFpi->rating - $awayTeamFpi->rating + ($game->neutral_field ? 0 : $this->homeFieldAdvantage);
         $spreadValue = abs($fpiDiff);
         $isHalf      = (floor($spreadValue) != $spreadValue);
         $totalGames  = $this->marginModel::sum('occurrences');

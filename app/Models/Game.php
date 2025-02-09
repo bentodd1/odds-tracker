@@ -16,13 +16,15 @@ class Game extends Model
         'commence_time',
         'season',
         'game_id',
-        'completed'
+        'completed',
+        'neutral_field'
     ];
 
 
     protected $casts = [
         'commence_time' => 'datetime',
-        'completed' => 'boolean'
+        'completed' => 'boolean',
+        'neutral_field' => 'boolean'
     ];
 
     public function sport()
