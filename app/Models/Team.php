@@ -30,10 +30,7 @@ class Team extends Model
     {
         return $this->hasOne(FpiRating::class)
             ->orderByDesc('revision')
-            ->whereIn('id', function($query) {
-                $query->select(\DB::raw('MIN(id)'))
-                    ->from('fpi_ratings')
-                    ->groupBy('team_id');
-            });
+            ->latest('recorded_at')
+            ->limit(1);
     }
 }
