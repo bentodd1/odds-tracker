@@ -18,4 +18,6 @@ app(Schedule::class)->command('espn:fetch-college-fpi')->daily();
 app(Schedule::class)->command('espn:fetch-college-basketball-bpi')->daily();
 app(Schedule::class)->command('espn:fetch-nba-bpi')->daily();
 
+app(Schedule::class)->command('match:ncaab-scores')->daily();
+
 

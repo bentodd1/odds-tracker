@@ -133,10 +133,12 @@ class MatchNCAABScores extends Command
             return;
         }
 
-        // Get the date from option or use today
+        // Default to yesterday if no date provided
         $targetDate = $this->option('date') 
             ? Carbon::parse($this->option('date'))
-            : now();
+            : now()->subDay();
+
+        $this->log("Processing date: " . $targetDate->format('Y/m/d'));
 
         $dates = [
             $targetDate->format('Y/m/d'),
