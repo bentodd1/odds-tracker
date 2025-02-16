@@ -11,16 +11,18 @@ use Illuminate\Support\Facades\Http;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Support\Facades\File;
+use App\Models\Team;
 
 class MatchNCAABScores extends Command
 {
-    protected $signature = 'match:ncaab-scores 
+    protected $signature = 'match:ncaab-scores
         {--date= : The date to fetch scores for (YYYY-MM-DD format)}
         {--debug : Show debug information}';
     protected $description = 'Match NCAA basketball scores from NCAA.com to existing games';
 
     private $unmatched = [];
     private $matched = [];
+    private $sport;
 
     // Common team name variations to help with matching
     private $teamMappings = [
@@ -37,7 +39,7 @@ class MatchNCAABScores extends Command
         'unc' => ['north carolina'],
         'ole miss' => ['mississippi'],
         'nc state' => ['north carolina state'],
-        
+
         // Saint/St. variations
         'saint johns' => ['st johns', 'st. johns', 'st. john\'s', 'st johns red storm'],
         'saint marys' => ['st marys', 'st. marys', 'saint marys gaels'],
@@ -47,7 +49,7 @@ class MatchNCAABScores extends Command
         'saint bonaventure' => ['st bonaventure', 'st. bonaventure'],
         'saint francis' => ['st francis', 'st. francis'],
         'saint thomas' => ['st thomas', 'st. thomas'],
-        
+
         // Common suffixes to remove
         'blue devils' => ['duke'],
         'crimson tide' => ['alabama'],
@@ -75,7 +77,7 @@ class MatchNCAABScores extends Command
         'hurricanes' => ['miami fl', 'miami florida'],
         'cavaliers' => ['virginia'],
         'hokies' => ['virginia tech'],
-        
+
         // State variations
         'mississippi state' => ['miss state', 'miss st'],
         'michigan state' => ['mich state', 'mich st'],
@@ -87,7 +89,7 @@ class MatchNCAABScores extends Command
         'ohio state' => ['osu'],
         'oklahoma state' => ['okla state', 'okla st', 'ok state'],
         'oregon state' => ['ore state', 'ore st'],
-        
+
         // Directional schools
         'north carolina' => ['unc', 'n carolina', 'n.c.'],
         'south carolina' => ['s carolina', 's.c.'],
@@ -97,7 +99,7 @@ class MatchNCAABScores extends Command
         'southern illinois' => ['s illinois', 's. illinois'],
         'western kentucky' => ['w kentucky', 'w. kentucky'],
         'eastern kentucky' => ['e kentucky', 'e. kentucky'],
-        
+
         // Other common variations
         'miami fl' => ['miami florida', 'miami (fl)', 'miami (fla)'],
         'miami oh' => ['miami ohio', 'miami (oh)', 'miami (ohio)'],
@@ -127,252 +129,240 @@ class MatchNCAABScores extends Command
 
     public function handle()
     {
-        $sport = Sport::where('key', 'basketball_ncaab')->first();
-        if (!$sport) {
-            $this->error("Sport not found");
-            return;
+        $this->sport = Sport::where('key', 'basketball_ncaab')->first();
+        if (!$this->sport) {
+            $this->error('Sport not found');
+            return 1;
         }
 
-        // Default to yesterday if no date provided
-        $targetDate = $this->option('date') 
-            ? Carbon::parse($this->option('date'))
-            : now()->subDay();
+        // Get target date from option or use today
+        $targetDate = $this->option('date')
+            ? Carbon::createFromFormat('Y-m-d', $this->option('date'))
+            : Carbon::today();
 
-        $this->log("Processing date: " . $targetDate->format('Y/m/d'));
+        // First, fetch all NCAA games
+        $ncaaGames = $this->fetchNcaaGames($targetDate);
+        $this->info("Found " . count($ncaaGames) . " NCAA games for {$targetDate->format('Y-m-d')}");
 
-        $dates = [
-            $targetDate->format('Y/m/d'),
-            $targetDate->copy()->subDay()->format('Y/m/d')
-        ];
+        $newScores = 0;
+        $updatedScores = 0;
 
-        $this->log("Processing dates: " . implode(', ', $dates));
-        
-        $allScores = [];
-        foreach ($dates as $date) {
-            $this->log("\nFetching scores for {$date}");
-            
-            try {
-                $url = "https://www.ncaa.com/scoreboard/basketball-men/d1/{$date}/all-conf";
-                $this->log("URL: {$url}");
-                
-                $response = Http::withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                ])->get($url);
+        foreach ($ncaaGames as $ncaaGame) {
+            // Record the score
+            $result = $this->recordGameScore($ncaaGame['game'], [
+                'date' => $targetDate->format('Y/m/d'),
+                'home_score' => $ncaaGame['home_score'],
+                'away_score' => $ncaaGame['away_score']
+            ]);
 
-                if ($response->failed()) {
-                    $this->log("Failed to fetch scores for {$date}", 'error');
-                    continue;
-                }
-
-                $doc = new DOMDocument();
-                @$doc->loadHTML($response->body());
-                $xpath = new DOMXPath($doc);
-
-                // Save raw HTML for debugging
-                if ($this->option('debug')) {
-                    $safeDateStr = str_replace('/', '-', $date);
-                    $debugPath = storage_path("logs/ncaab-raw-{$safeDateStr}.html");
-                    
-                    // Ensure the directory exists
-                    $directory = dirname($debugPath);
-                    if (!File::exists($directory)) {
-                        File::makeDirectory($directory, 0755, true);
-                    }
-                    
-                    File::put($debugPath, $response->body());
-                    $this->log("Saved raw HTML to: {$debugPath}");
-                }
-
-                $gameNodes = $xpath->query("//div[contains(@class, 'gamePod-type-game')]");
-                $this->log("Found " . $gameNodes->length . " games for {$date}");
-
-                foreach ($gameNodes as $index => $gameNode) {
-                    $homeTeamNode = $xpath->query(".//li[last()]//span[contains(@class, 'gamePod-game-team-name') and not(contains(@class, 'short'))]", $gameNode)->item(0);
-                    $awayTeamNode = $xpath->query(".//li[1]//span[contains(@class, 'gamePod-game-team-name') and not(contains(@class, 'short'))]", $gameNode)->item(0);
-                    $homeScoreNode = $xpath->query(".//li[last()]//span[contains(@class, 'gamePod-game-team-score')]", $gameNode)->item(0);
-                    $awayScoreNode = $xpath->query(".//li[1]//span[contains(@class, 'gamePod-game-team-score')]", $gameNode)->item(0);
-                    $statusNode = $xpath->query(".//div[contains(@class, 'gamePod-status')]", $gameNode)->item(0);
-
-                    $this->log(sprintf("Game %d:", ($index + 1)));
-                    $this->log("Home Team: " . ($homeTeamNode?->textContent ?? 'Not found'));
-                    $this->log("Away Team: " . ($awayTeamNode?->textContent ?? 'Not found'));
-                    $this->log("Home Score: " . ($homeScoreNode?->textContent ?? 'Not found'));
-                    $this->log("Away Score: " . ($awayScoreNode?->textContent ?? 'Not found'));
-                    $this->log("Status: " . ($statusNode?->textContent ?? 'Not found'));
-
-                    if (!$homeTeamNode || !$awayTeamNode || !$homeScoreNode || !$awayScoreNode || !$statusNode) {
-                        $this->log("Skipping game due to missing data", 'error');
-                        continue;
-                    }
-
-                    // Only store final scores
-                    if (!str_contains(strtolower($statusNode->textContent), 'final')) {
-                        $this->log("Skipping non-final game: {$statusNode->textContent}");
-                        continue;
-                    }
-
-                    $allScores[] = [
-                        'home_team' => trim($homeTeamNode->textContent),
-                        'away_team' => trim($awayTeamNode->textContent),
-                        'home_score' => (int)trim($homeScoreNode->textContent),
-                        'away_score' => (int)trim($awayScoreNode->textContent),
-                        'date' => $date
-                    ];
-
-                    $this->log("Added final score to processing list");
-                }
-
-            } catch (\Exception $e) {
-                $this->log("Error processing {$date}: " . $e->getMessage(), 'error');
-                $this->log($e->getTraceAsString(), 'error');
+            if ($result === 'created') {
+                $newScores++;
+            } elseif ($result === 'updated') {
+                $updatedScores++;
             }
         }
 
-        $this->log("\nFound " . count($allScores) . " final scores to process");
+        $this->info("\nScores processed:");
+        $this->info("New scores: {$newScores}");
+        $this->info("Updated scores: {$updatedScores}");
 
-        // Now try to match these scores to games in our database
-        foreach ($allScores as $score) {
-            $games = Game::with(['homeTeam', 'awayTeam'])
-                ->where('sport_id', $sport->id)
-                ->where('commence_time', '>', now()->subHours(48))
-                ->where('commence_time', '<', now()->addHours(24))
-                ->whereDoesntHave('scores', function($query) {
-                    $query->where('period', 'F');
+        return 0;
+    }
+
+    private function fetchNcaaGames($targetDate)
+    {
+        $url = "https://www.ncaa.com/scoreboard/basketball-men/d1/{$targetDate->format('Y/m/d')}/all-conf";
+        $response = Http::get($url);
+
+        if (!$response->successful()) {
+            $this->error("Failed to fetch scores from NCAA.com");
+            return [];
+        }
+
+        $doc = new DOMDocument();
+        @$doc->loadHTML($response->body());
+        $xpath = new DOMXPath($doc);
+
+        $games = [];
+        $gameContainers = $xpath->query("//div[contains(@class, 'gamePod-type-game')]");
+
+        foreach ($gameContainers as $container) {
+            $teams = $xpath->query(".//ul[contains(@class, 'gamePod-game-teams')]/li", $container);
+
+            if ($teams->length !== 2) {
+                continue;
+            }
+
+            $homeTeamName = trim($xpath->query(".//span[contains(@class, 'gamePod-game-team-name')][not(contains(@class, 'short'))]", $teams->item(0))->item(0)->textContent);
+            $awayTeamName = trim($xpath->query(".//span[contains(@class, 'gamePod-game-team-name')][not(contains(@class, 'short'))]", $teams->item(1))->item(0)->textContent);
+
+            $homeScore = (int)trim($xpath->query(".//span[contains(@class, 'gamePod-game-team-score')]", $teams->item(0))->item(0)->textContent);
+            $awayScore = (int)trim($xpath->query(".//span[contains(@class, 'gamePod-game-team-score')]", $teams->item(1))->item(0)->textContent);
+
+            if (!$homeTeamName || !$awayTeamName || !$homeScore || !$awayScore) {
+                continue;
+            }
+
+            $this->info("\nFound NCAA game: {$homeTeamName} ({$homeScore}) vs {$awayTeamName} ({$awayScore})");
+
+            // Find matching teams
+            $homeTeam = $this->findMatchingTeam($homeTeamName);
+            $awayTeam = $this->findMatchingTeam($awayTeamName);
+
+            if (!$homeTeam || !$awayTeam) {
+                $this->error("Could not find matching teams in database");
+                $this->info("Home team found: " . ($homeTeam ? "Yes" : "No"));
+                $this->info("Away team found: " . ($awayTeam ? "Yes" : "No"));
+                continue;
+            }
+
+            $this->info("Matched to: {$homeTeam->name} vs {$awayTeam->name}");
+
+            // Search for game with expanded date range
+            $startDate = $targetDate->copy()->startOfDay()->subHours(14);
+            $endDate = $targetDate->copy()->endOfDay()->addHours(14);
+
+            $this->info("Searching for game between {$startDate} and {$endDate}");
+
+            $query = Game::where('sport_id', $this->sport->id)
+                ->where(function($query) use ($homeTeam, $awayTeam) {
+                    $query->where(function($q) use ($homeTeam, $awayTeam) {
+                        $q->where('home_team_id', $homeTeam->id)
+                          ->where('away_team_id', $awayTeam->id);
+                    })->orWhere(function($q) use ($homeTeam, $awayTeam) {
+                        $q->where('home_team_id', $awayTeam->id)
+                          ->where('away_team_id', $homeTeam->id);
+                    });
                 })
-                ->get();
+                ->whereBetween('commence_time', [$startDate, $endDate]);
 
-            foreach ($games as $game) {
-                if ($this->teamsMatch($game, $score['home_team'], $score['away_team'])) {
-                    try {
-                        Score::create([
-                            'game_id' => $game->id,
-                            'home_score' => $score['home_score'],
-                            'away_score' => $score['away_score'],
-                            'period' => 'F'
-                        ]);
+            $this->info("SQL Query: " . $query->toSql());
+            $this->info("Bindings: " . json_encode($query->getBindings()));
 
-                        $this->matched[] = [
-                            'home' => $game->homeTeam->name,
-                            'away' => $game->awayTeam->name,
-                            'date' => $game->commence_time,
-                            'score' => "{$score['away_score']}-{$score['home_score']}"
-                        ];
+            $game = $query->first();
 
-                        if ($this->option('debug')) {
-                            $this->info("Matched and recorded score: {$game->awayTeam->name} {$score['away_score']} @ {$game->homeTeam->name} {$score['home_score']}");
-                        }
-                        break;
-                    } catch (\Exception $e) {
-                        $this->error("Error saving score: " . $e->getMessage());
-                    }
+            if (!$game) {
+                // Check if any game exists between these teams regardless of date
+                $anyGame = Game::where('sport_id', $this->sport->id)
+                    ->where(function($query) use ($homeTeam, $awayTeam) {
+                        $query->where(function($q) use ($homeTeam, $awayTeam) {
+                            $q->where('home_team_id', $homeTeam->id)
+                              ->where('away_team_id', $awayTeam->id);
+                        })->orWhere(function($q) use ($homeTeam, $awayTeam) {
+                            $q->where('home_team_id', $awayTeam->id)
+                              ->where('away_team_id', $homeTeam->id);
+                        });
+                    })
+                    ->first();
+
+                if ($anyGame) {
+                    $this->info("Found game but outside date range. Game time: " . $anyGame->commence_time);
+                } else {
+                    $this->error("No game found at all between these teams");
                 }
+                continue;
             }
+
+            $this->info("Found matching game in database (ID: {$game->id})");
+
+            $games[] = [
+                'game' => $game,
+                'date' => $targetDate->format('Y/m/d'),
+                'home_score' => $homeScore,
+                'away_score' => $awayScore
+            ];
         }
 
-        // Output summary
-        $this->info("\nMatching Summary:");
-        $this->info("Successfully matched: " . count($this->matched));
-        
-        if ($this->option('debug') && count($this->matched) > 0) {
-            $this->info("\nMatched games:");
-            foreach ($this->matched as $game) {
-                $this->info("{$game['away']} @ {$game['home']} ({$game['score']})");
-            }
-        }
+        return $games;
     }
 
-    private function teamsMatch($game, $homeTeam, $awayTeam)
+    private function getTeamMappings()
     {
-        if ($this->option('debug')) {
-            $this->info("\nAttempting to match teams:");
-            $this->info("NCAA Home Team: " . $homeTeam);
-            $this->info("NCAA Away Team: " . $awayTeam);
-            $this->info("DB Home Team: " . $game->homeTeam->name);
-            $this->info("DB Away Team: " . $game->awayTeam->name);
-        }
-
-        $dbHomeTeam = $this->normalizeTeamName($game->homeTeam->name);
-        $dbAwayTeam = $this->normalizeTeamName($game->awayTeam->name);
-        $ncaaHomeTeam = $this->normalizeTeamName($homeTeam);
-        $ncaaAwayTeam = $this->normalizeTeamName($awayTeam);
-
-        if ($this->option('debug')) {
-            $this->info("After normalization:");
-            $this->info("NCAA Home (normalized): " . $ncaaHomeTeam);
-            $this->info("NCAA Away (normalized): " . $ncaaAwayTeam);
-            $this->info("DB Home (normalized): " . $dbHomeTeam);
-            $this->info("DB Away (normalized): " . $dbAwayTeam);
-        }
-
-        // Try direct match first
-        if (($ncaaHomeTeam === $dbHomeTeam && $ncaaAwayTeam === $dbAwayTeam) ||
-            ($ncaaHomeTeam === $dbAwayTeam && $ncaaAwayTeam === $dbHomeTeam)) {
-            if ($this->option('debug')) {
-                $this->info("✓ Direct match found!");
-            }
-            return true;
-        }
-
-        // Try fuzzy matching
-        $fuzzyMatch = ($this->isFuzzyMatch($ncaaHomeTeam, $dbHomeTeam) && 
-                      $this->isFuzzyMatch($ncaaAwayTeam, $dbAwayTeam)) ||
-                     ($this->isFuzzyMatch($ncaaHomeTeam, $dbAwayTeam) && 
-                      $this->isFuzzyMatch($ncaaAwayTeam, $dbHomeTeam));
-
-        if ($this->option('debug')) {
-            if ($fuzzyMatch) {
-                $this->info("✓ Fuzzy match found!");
-            } else {
-                $this->error("✗ No match found");
-            }
-        }
-
-        return $fuzzyMatch;
+        return [
+            // Exact matches from NCAA.com to our database names
+            'Princeton' => 'Princeton Tigers',
+            'Penn' => 'Pennsylvania Quakers',
+            'Southern California' => 'USC Trojans',
+            'Purdue' => 'Purdue Boilermakers',
+            'VCU' => 'VCU Rams',
+            'Dayton' => 'Dayton Flyers',
+            'St. John\'s (NY)' => 'St. John\'s Red Storm',
+            'UConn' => 'Connecticut Huskies',
+            'Saint Louis' => 'Saint Louis Billikens',
+            'Saint Joseph\'s' => 'Saint Joseph\'s Hawks',
+            'San Jose St.' => 'San Jose State Spartans',
+            'Boise St.' => 'Boise State Broncos',
+            'Utah St.' => 'Utah State Aggies',
+            'Fresno St.' => 'Fresno State Bulldogs',
+            'Georgia' => 'Georgia Bulldogs',
+            'LSU' => 'LSU Tigers'
+        ];
     }
 
-    private function normalizeTeamName($name)
+    private function findMatchingTeam($ncaaTeamName)
     {
-        if ($this->option('debug')) {
-            $this->info("Normalizing name: " . $name);
+        $mappings = $this->getTeamMappings();
+
+        // If we have a direct mapping, use it
+        $dbTeamName = $mappings[$ncaaTeamName] ?? null;
+
+        if ($dbTeamName) {
+            return Team::where('name', $dbTeamName)
+                      ->where('sport_id', $this->sport->id)
+                      ->first();
         }
 
-        $name = strtolower(trim($name));
-        
-        // Remove common suffixes for better matching
-        $name = str_replace([' blue devils', ' crimson tide', ' volunteers', ' tigers', ' cyclones', ' cougars'], '', $name);
-        
-        // Normalize St./Saint/State variations
-        $name = preg_replace('/\bSt\.\s+/', 'Saint ', $name);
-        $name = preg_replace('/\bSt\s+/', 'Saint ', $name);
-        $name = preg_replace('/\bState\b/', 'St', $name);
-
-        if ($this->option('debug')) {
-            $this->info("Result after normalization: " . $name);
-        }
-
-        return $name;
+        return null;
     }
 
-    private function isFuzzyMatch($name1, $name2)
+    private function recordGameScore($game, $score)
     {
-        if ($this->option('debug')) {
-            $this->info("Attempting fuzzy match between:");
-            $this->info("  Name 1: " . $name1);
-            $this->info("  Name 2: " . $name2);
+        try {
+            $this->log("\nRecording score for game:");
+            $this->log("Game ID: " . $game->id);
+            $this->log("Teams: " . $game->homeTeam->name . " vs " . $game->awayTeam->name);
+            
+            $homeFpi = $game->homeTeam->latestFpi()->first();
+            $awayFpi = $game->awayTeam->latestFpi()->first();
+
+            $this->log("Home FPI: " . ($homeFpi ? $homeFpi->rating : 'null'));
+            $this->log("Away FPI: " . ($awayFpi ? $awayFpi->rating : 'null'));
+
+            $scoreData = [
+                'game_id' => $game->id,
+                'period' => 'F',  // Final score
+                'home_score' => $score['home_score'],
+                'away_score' => $score['away_score'],
+                'home_fpi' => $homeFpi ? $homeFpi->rating : null,
+                'away_fpi' => $awayFpi ? $awayFpi->rating : null,
+                'date' => Carbon::createFromFormat('Y/m/d', $score['date'])->startOfDay(),
+            ];
+
+            $this->log("Score data to be saved:");
+            $this->log(json_encode($scoreData, JSON_PRETTY_PRINT));
+
+            $exists = Score::where([
+                'game_id' => $game->id,
+                'period' => 'F'
+            ])->exists();
+
+            $result = Score::updateOrCreate(
+                [
+                    'game_id' => $game->id,
+                    'period' => 'F'
+                ],
+                $scoreData
+            );
+
+            $this->log("Score saved successfully: " . $result->id);
+            
+            return $exists ? 'updated' : 'created';
+
+        } catch (\Exception $e) {
+            $this->log("Error recording score: " . $e->getMessage(), 'error');
+            $this->log("Stack trace: " . $e->getTraceAsString(), 'error');
+            return null;
         }
-
-        // Consider names matching if one contains the other
-        $match = str_contains($name1, $name2) || str_contains($name2, $name1);
-
-        if ($this->option('debug')) {
-            if ($match) {
-                $this->info("  ✓ Fuzzy match successful");
-            } else {
-                $this->info("  ✗ Fuzzy match failed");
-            }
-        }
-
-        return $match;
     }
 
     private function log($message, $type = 'info')
@@ -386,13 +376,18 @@ class MatchNCAABScores extends Command
             }
         }
 
-        // File logging
+        // File logging - ensure the logs directory exists
         $date = now()->format('Y-m-d');
         $logPath = storage_path("logs/ncaab-scores-{$date}.log");
-        
+
+        // Create logs directory if it doesn't exist
+        if (!File::exists(dirname($logPath))) {
+            File::makeDirectory(dirname($logPath), 0755, true);
+        }
+
         $timestamp = now()->format('Y-m-d H:i:s');
-        $logMessage = "[{$timestamp}] {$message}\n";
-        
+        $logMessage = "[{$timestamp}] {$type}: {$message}\n";
+
         File::append($logPath, $logMessage);
     }
-} 
+}
