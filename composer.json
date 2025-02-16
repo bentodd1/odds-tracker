@@ -12,7 +12,8 @@
         "laravel/tinker": "^2.9",
         "posthog/posthog-php": "^3.3",
         "spatie/laravel-data": "^4.11",
-        "stevebauman/location": "^7.4"
+        "stevebauman/location": "^7.4",
+        "stripe/stripe-php": "^16.5"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

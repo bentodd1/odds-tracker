@@ -32,6 +32,14 @@
                 </a>
 
             </div>
+            <div class="flex items-center space-x-4">
+                @auth
+                    <span class="text-gray-600">{{ auth()->user()->name }}</span>
+                @else
+                    <a href="{{ route('register') }}" 
+                       class="text-blue-600 hover:text-blue-700">Sign Up</a>
+                @endauth
+            </div>
         </div>
     </div>
 </nav>
