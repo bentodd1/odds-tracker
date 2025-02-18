@@ -22,8 +22,9 @@
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.disabled = true;
         
-        if (document.getElementById('subscribe').checked) {
-            try {
+        try {
+            if (document.getElementById('subscribe').checked) {
+                // Create checkout session first
                 const response = await fetch('{{ route('subscription.checkout') }}', {
                     method: 'POST',
                     headers: {
@@ -31,23 +32,37 @@
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     }
                 });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create checkout session');
+                }
+                
                 const session = await response.json();
                 
-                // First create the user account
+                // Submit the registration form
                 const formData = new FormData(form);
-                await fetch('{{ route('register') }}', {
+                const registerResponse = await fetch('{{ route('register') }}', {
                     method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
                     body: formData
                 });
-
-                // Then redirect to Stripe checkout
+                
+                if (!registerResponse.ok) {
+                    throw new Error('Registration failed');
+                }
+                
+                // Redirect to Stripe checkout
                 await stripe.redirectToCheckout({ sessionId: session.id });
-            } catch (error) {
-                console.error('Error:', error);
-                submitButton.disabled = false;
+            } else {
+                // Just submit the form normally if not subscribing
+                form.submit();
             }
-        } else {
-            form.submit();
+        } catch (error) {
+            console.error('Error:', error);
+            submitButton.disabled = false;
+            alert('There was an error processing your request. Please try again.');
         }
     }
 </script>
@@ -68,7 +83,7 @@
             </div>
         @endif
 
-        <form onsubmit="handleRegistration(event)">
+        <form method="POST" action="{{ route('register') }}" onsubmit="handleRegistration(event)">
             @csrf
             
             <div class="mb-4">
@@ -102,7 +117,7 @@
             <div class="mb-6">
                 <label class="flex items-center">
                     <input type="checkbox" name="subscribe" id="subscribe" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                    <span class="ml-2 text-gray-700">Subscribe now for $5 to access all sports</span>
+                    <span class="ml-2 text-gray-700">Subscribe now for $10 to access all sports</span>
                 </label>
             </div>
 

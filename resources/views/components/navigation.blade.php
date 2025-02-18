@@ -39,7 +39,7 @@
                         @unless(auth()->user()->hasActiveSubscription())
                             <a href="{{ route('dashboard.subscribe') }}" 
                                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                                Upgrade ($5)
+                                Upgrade ($10)
                             </a>
                         @endunless
                         <span class="text-gray-600">{{ auth()->user()->name }}</span>

@@ -58,4 +58,5 @@ class User extends Authenticatable
             ->where('expires_at', '>', now())
             ->exists();
     }
+
 }

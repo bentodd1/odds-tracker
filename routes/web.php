@@ -20,7 +20,6 @@ Route::middleware([TrackVisitor::class])->group(function () {
     Route::get('/nhl', [DashboardController::class, 'nhl'])->name('dashboard.nhl');
     Route::get('/ncaab', [DashboardController::class, 'ncaab'])->name('dashboard.ncaab');
 
-    Route::post('/signup', [EarlyAccessController::class, 'store'])->name('signup.store');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Subscription routes

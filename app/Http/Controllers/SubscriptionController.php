@@ -34,7 +34,7 @@ class SubscriptionController extends BaseController
                         'product_data' => [
                             'name' => 'Sports Odds Premium Access',
                         ],
-                        'unit_amount' => 500, // $5.00 in cents
+                        'unit_amount' => 1000, // $10.00 in cents
                     ],
                     'quantity' => 1,
                 ]],
