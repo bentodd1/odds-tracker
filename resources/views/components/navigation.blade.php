@@ -39,7 +39,7 @@
                         @unless(auth()->user()->hasActiveSubscription())
                             <a href="{{ route('dashboard.subscribe') }}" 
                                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                                Upgrade ($10)
+                               Unlock All Odds ($10)
                             </a>
                         @endunless
                         <span class="text-gray-600">{{ auth()->user()->name }}</span>
@@ -53,7 +53,7 @@
                         <a href="{{ route('login') }}" 
                            class="text-gray-600 hover:text-blue-600">Login</a>
                         <a href="{{ route('register') }}" 
-                           class="text-blue-600 hover:text-blue-700">Sign Up</a>
+                           class="text-blue-600 hover:text-blue-700">Sign Up to Unlock</a>
                     @endauth
                 </div>
             </div>

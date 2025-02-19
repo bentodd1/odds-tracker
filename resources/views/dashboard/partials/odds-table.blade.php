@@ -46,7 +46,7 @@
                 <td class="p-2">
                     <div class="font-medium">{{ $game['away_team']['name'] }}</div>
                 </td>
-                <td class="p-2 text-center {{ (!auth()->user()?->hasActiveSubscription() && $index > 0) ? 'blur-odds' : '' }}">
+                <td class="p-2 text-center {{ (!auth()->user()?->hasActiveSubscription() && $loop->index > 0) ? 'blur-odds' : '' }}">
                     <div>
                         {{ $game['away_team']['fpi'] ? number_format($game['away_team']['fpi'], 1) : 'N/A' }}
                     </div>
@@ -61,7 +61,7 @@
                     @endif
                 </td>
                 @foreach($selectedCasinos as $casinoName)
-                    <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $index > 0) ? 'blur-odds' : '' }}">
+                    <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $loop->parent->index > 0) ? 'blur-odds' : '' }}">
                         <div class="flex text-sm">
                             <div class="flex-1 text-center {{
                                         $game['away_team']['best_value']['casino'] === $casinoName &&
@@ -108,7 +108,7 @@
                 <td class="p-2">
                     <div class="font-medium">{{ $game['home_team']['name'] }}</div>
                 </td>
-                <td class="p-2 text-center {{ (!auth()->user()?->hasActiveSubscription() && $index > 0) ? 'blur-odds' : '' }}">
+                <td class="p-2 text-center {{ (!auth()->user()?->hasActiveSubscription() && $loop->index > 0) ? 'blur-odds' : '' }}">
                     <div>
                         {{ $game['home_team']['fpi'] ? number_format($game['home_team']['fpi'], 1) : 'N/A' }}
                     </div>
@@ -123,7 +123,7 @@
                     @endif
                 </td>
                 @foreach($selectedCasinos as $casinoName)
-                    <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $index > 0) ? 'blur-odds' : '' }}">
+                    <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $loop->parent->index > 0) ? 'blur-odds' : '' }}">
                         <div class="flex text-sm">
                             <div class="flex-1 text-center {{
                                         $game['home_team']['best_value']['casino'] === $casinoName &&

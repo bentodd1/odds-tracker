@@ -69,7 +69,7 @@ class SubscriptionController extends BaseController
                     'expires_at' => now()->addYear()
                 ]);
 
-                return redirect()->route('dashboard.ncaaf')
+                return redirect()->route('dashboard.ncaab')
                     ->with('success', 'Thank you for subscribing! You now have access to all sports.');
             }
         } catch (\Exception $e) {

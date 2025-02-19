@@ -7,14 +7,16 @@
 <script>
     const stripe = Stripe('{{ config('services.stripe.key') }}');
     
-    document.addEventListener('DOMContentLoaded', function() {
-        const subscribeCheckbox = document.getElementById('subscribe');
-        const paymentSection = document.getElementById('payment-section');
+    const subscribeCheckbox = document.getElementById('subscribe');
+    const paymentSection = document.getElementById('payment-section');
+    
+    if (subscribeCheckbox && paymentSection) {
+        paymentSection.style.display = subscribeCheckbox.checked ? 'block' : 'none';
         
         subscribeCheckbox.addEventListener('change', function() {
             paymentSection.style.display = this.checked ? 'block' : 'none';
         });
-    });
+    }
 
     async function handleRegistration(event) {
         event.preventDefault();
@@ -23,8 +25,22 @@
         submitButton.disabled = true;
         
         try {
+            // First submit the registration form
+            const formData = new FormData(form);
+            const registerResponse = await fetch('{{ route('register') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: formData
+            });
+            
+            if (!registerResponse.ok) {
+                throw new Error('Registration failed');
+            }
+
+            // If user wants to subscribe, handle Stripe checkout
             if (document.getElementById('subscribe').checked) {
-                // Create checkout session first
                 const response = await fetch('{{ route('subscription.checkout') }}', {
                     method: 'POST',
                     headers: {
@@ -39,25 +55,17 @@
                 
                 const session = await response.json();
                 
-                // Submit the registration form
-                const formData = new FormData(form);
-                const registerResponse = await fetch('{{ route('register') }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: formData
+                // Redirect to Stripe checkout
+                const result = await stripe.redirectToCheckout({
+                    sessionId: session.id
                 });
                 
-                if (!registerResponse.ok) {
-                    throw new Error('Registration failed');
+                if (result.error) {
+                    throw new Error(result.error.message);
                 }
-                
-                // Redirect to Stripe checkout
-                await stripe.redirectToCheckout({ sessionId: session.id });
             } else {
-                // Just submit the form normally if not subscribing
-                form.submit();
+                // If not subscribing, redirect to NCAAB dashboard
+                window.location.href = '{{ route('dashboard.ncaab') }}';
             }
         } catch (error) {
             console.error('Error:', error);
