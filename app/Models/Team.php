@@ -33,4 +33,9 @@ class Team extends Model
             ->latest('recorded_at')
             ->limit(1);
     }
+
+    public function fpis()
+    {
+        return $this->hasMany(FpiRating::class);
+    }
 }

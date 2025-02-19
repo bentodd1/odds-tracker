@@ -135,10 +135,10 @@ class MatchNCAABScores extends Command
             return 1;
         }
 
-        // Get target date from option or use today
+        // Get target date from option or use yesterday
         $targetDate = $this->option('date')
             ? Carbon::createFromFormat('Y-m-d', $this->option('date'))
-            : Carbon::today();
+            : Carbon::yesterday();
 
         // First, fetch all NCAA games
         $ncaaGames = $this->fetchNcaaGames($targetDate);
@@ -607,11 +607,24 @@ class MatchNCAABScores extends Command
             $this->log("Game ID: " . $game->id);
             $this->log("Teams: " . $game->homeTeam->name . " vs " . $game->awayTeam->name);
             
-            $homeFpi = $game->homeTeam->latestFpi()->first();
-            $awayFpi = $game->awayTeam->latestFpi()->first();
+            $targetDate = Carbon::createFromFormat('Y/m/d', $score['date'])->endOfDay();
+            
+            // Get latest FPI ratings before or equal to target date
+            $homeFpi = $game->homeTeam->fpis()
+                ->where('recorded_at', '<=', $targetDate)
+                ->orderBy('revision', 'desc')
+                ->orderBy('recorded_at', 'desc')
+                ->first();
+            
+            $awayFpi = $game->awayTeam->fpis()
+                ->where('recorded_at', '<=', $targetDate)
+                ->orderBy('revision', 'desc')
+                ->orderBy('recorded_at', 'desc')
+                ->first();
 
-            $this->log("Home FPI: " . ($homeFpi ? $homeFpi->rating : 'null'));
-            $this->log("Away FPI: " . ($awayFpi ? $awayFpi->rating : 'null'));
+            $this->log("Target date: " . $targetDate->format('Y-m-d H:i:s'));
+            $this->log("Home FPI: " . ($homeFpi ? "{$homeFpi->rating} (from {$homeFpi->recorded_at}, revision {$homeFpi->revision})" : 'null'));
+            $this->log("Away FPI: " . ($awayFpi ? "{$awayFpi->rating} (from {$awayFpi->recorded_at}, revision {$awayFpi->revision})" : 'null'));
 
             $scoreData = [
                 'game_id' => $game->id,
@@ -620,7 +633,7 @@ class MatchNCAABScores extends Command
                 'away_score' => $score['away_score'],
                 'home_fpi' => $homeFpi ? $homeFpi->rating : null,
                 'away_fpi' => $awayFpi ? $awayFpi->rating : null,
-                'date' => Carbon::createFromFormat('Y/m/d', $score['date'])->startOfDay(),
+                'date' => $targetDate->startOfDay(),
             ];
 
             $this->log("Score data to be saved:");
