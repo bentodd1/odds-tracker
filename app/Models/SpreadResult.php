@@ -11,7 +11,9 @@ class SpreadResult extends Model
         'score_id',
         'result',
         'fpi_spread',
-        'fpi_correctly_predicted'
+        'fpi_correctly_predicted',
+        'fpi_better_than_spread',
+        'fpi_spread_difference'
     ];
 
     protected $casts = [
@@ -62,11 +64,15 @@ class SpreadResult extends Model
         $fpiSpread = null;
         $fpiCorrect = null;
         $fpiBetterThanSpread = null;
+        $fpiSpreadDifference = null;
 
         if ($homeFpi !== null && $awayFpi !== null) {
             $fpiSpread = round($homeFpi - $awayFpi, 1);
             // Add home field advantage only if not a neutral field
             $adjustedFpiSpread = $fpiSpread + ($neutralField ? 0 : $homeFieldAdvantage);
+            
+            // Calculate absolute difference between FPI spread and market spread
+            $fpiSpreadDifference = round(abs($adjustedFpiSpread - (-$spread)), 1);
             
             // Calculate how far off each prediction was
             // Market spread is already from home perspective (negative means home favored)
@@ -88,7 +94,8 @@ class SpreadResult extends Model
             'result' => $result,
             'fpi_correct' => $fpiCorrect,
             'fpi_spread' => $fpiSpread,
-            'fpi_better_than_spread' => $fpiBetterThanSpread
+            'fpi_better_than_spread' => $fpiBetterThanSpread,
+            'fpi_spread_difference' => $fpiSpreadDifference
         ];
     }
 
@@ -97,12 +104,27 @@ class SpreadResult extends Model
      */
     public static function createFromScore(Score $score, Spread $spread)
     {
+        // Get the sport key and extract the identifier (e.g., "ncaab" from "basketball_ncaab")
+        $sportKey = $spread->game->sport->key;
+        $sportIdentifier = str_contains($sportKey, '_') ? explode('_', $sportKey)[1] : $sportKey;
+        
+        // Initialize GameTransformationService with the sport identifier
+        $gameService = new \App\Services\GameTransformationService($sportIdentifier);
+        
+        // Calculate FPI spread if both home and away FPI are available
+        $fpiSpread = null;
+        if ($score->home_fpi !== null && $score->away_fpi !== null) {
+            $fpiSpread = round($score->home_fpi - $score->away_fpi, 1);
+        }
+
         $result = self::calculateResult(
             $score->home_score,
             $score->away_score,
             $spread->spread,
             $score->home_fpi,
-            $score->away_fpi
+            $score->away_fpi,
+            $gameService->getHomeFieldAdvantage(),
+            $spread->game->neutral_field ?? false
         );
 
         return self::create([
@@ -110,7 +132,9 @@ class SpreadResult extends Model
             'score_id' => $score->id,
             'result' => $result['result'],
             'fpi_spread' => $result['fpi_spread'],
-            'fpi_correctly_predicted' => $result['fpi_correct']
+            'fpi_correctly_predicted' => $result['fpi_correct'],
+            'fpi_better_than_spread' => $result['fpi_better_than_spread'],
+            'fpi_spread_difference' => $result['fpi_spread_difference']
         ]);
     }
 }

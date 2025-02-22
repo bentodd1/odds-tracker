@@ -363,4 +363,51 @@ class SpreadResultTest extends TestCase
         
         $this->assertNull($result['fpi_better_than_spread']);
     }
+
+    public function test_fpi_spread_difference_calculation()
+    {
+        $result = SpreadResult::calculateResult(
+            homeScore: 27,
+            awayScore: 20,
+            spread: -7,       // Market predicts home by 7
+            homeFpi: 15.5,    // FPI predicts home by 6.3 (3.3 + 3.0 HFA)
+            awayFpi: 12.2,
+            homeFieldAdvantage: 3.0
+        );
+        
+        // Market spread: -7 (home by 7)
+        // FPI spread: 3.3 + 3.0 = 6.3 (home by 6.3)
+        // Difference should be |6.3 - 7| = 0.7
+        $this->assertEquals(0.7, $result['fpi_spread_difference']);
+    }
+
+    public function test_fpi_spread_difference_with_opposite_predictions()
+    {
+        $result = SpreadResult::calculateResult(
+            homeScore: 24,
+            awayScore: 21,
+            spread: 3,        // Market predicts away by 3
+            homeFpi: 15.5,    // FPI predicts home by 6.3 (3.3 + 3.0 HFA)
+            awayFpi: 12.2,
+            homeFieldAdvantage: 3.0
+        );
+        
+        // Market spread: +3 (away by 3)
+        // FPI spread: 3.3 + 3.0 = 6.3 (home by 6.3)
+        // Difference should be |6.3 - (-3)| = 9.3
+        $this->assertEquals(9.3, $result['fpi_spread_difference']);
+    }
+
+    public function test_fpi_spread_difference_null_when_fpi_missing()
+    {
+        $result = SpreadResult::calculateResult(
+            homeScore: 24,
+            awayScore: 21,
+            spread: -3,
+            homeFpi: null,
+            awayFpi: 12.2
+        );
+        
+        $this->assertNull($result['fpi_spread_difference']);
+    }
 }

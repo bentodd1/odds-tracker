@@ -9,8 +9,8 @@ use App\Models\NflMargin;
 
 class GameTransformationService
 {
-    private $marginModel;
-    private $homeFieldAdvantage;
+    protected $marginModel;
+    protected $homeFieldAdvantage;
 
     public function __construct($sport = 'nfl')
     {
@@ -18,12 +18,22 @@ class GameTransformationService
         $this->setHomeFieldAdvantage($sport);
     }
 
+    /**
+     * Get the home field advantage value
+     */
+    public function getHomeFieldAdvantage(): float
+    {
+        return $this->homeFieldAdvantage;
+    }
+
     private function setHomeFieldAdvantage($sport)
     {
-        $this->homeFieldAdvantage = match (strtolower($sport)) {
+        $sportKey = str_contains($sport, '_') ? explode('_', $sport)[1] : $sport;
+
+        $this->homeFieldAdvantage = match (strtolower($sportKey)) {
             'nfl' => 2.0,
             'ncaaf' => 2.5,
-            'ncaab' => 4.5,
+            'ncaab' => 3.5,
             'nba' => 2.4,
             default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
         };
