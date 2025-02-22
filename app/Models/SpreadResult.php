@@ -31,7 +31,7 @@ class SpreadResult extends Model
     }
 
     /**
-     * Calculate if the spread was covered based on the final score
+     * Calculate if the spread was covered and if FPI was more accurate than the spread
      * @param int $homeScore
      * @param int $awayScore
      * @param float $spread Positive means home team gets points, negative means home team gives points
@@ -39,7 +39,7 @@ class SpreadResult extends Model
      * @param float|null $awayFpi Away team's FPI rating
      * @param float $homeFieldAdvantage Home field advantage points (defaults to 3)
      * @param bool $neutralField Whether the game is at a neutral site
-     * @return array Returns ['result' => string, 'fpi_correct' => bool|null, 'fpi_spread' => float|null]
+     * @return array Returns ['result' => string, 'fpi_correct' => bool|null, 'fpi_spread' => float|null, 'fpi_better_than_spread' => bool|null]
      */
     public static function calculateResult(
         $homeScore, 
@@ -61,11 +61,24 @@ class SpreadResult extends Model
         // Calculate FPI spread and prediction if both FPI values are available
         $fpiSpread = null;
         $fpiCorrect = null;
+        $fpiBetterThanSpread = null;
 
         if ($homeFpi !== null && $awayFpi !== null) {
             $fpiSpread = round($homeFpi - $awayFpi, 1);
             // Add home field advantage only if not a neutral field
             $adjustedFpiSpread = $fpiSpread + ($neutralField ? 0 : $homeFieldAdvantage);
+            
+            // Calculate how far off each prediction was
+            // Market spread is already from home perspective (negative means home favored)
+            $spreadPrediction = -$spread; // Convert to predicted margin
+            $spreadError = abs($actualMargin - $spreadPrediction);
+            
+            // FPI spread is from home perspective (positive means home favored)
+            $fpiError = abs($actualMargin - $adjustedFpiSpread);
+            
+            $fpiBetterThanSpread = $fpiError < $spreadError;
+
+            // Keep existing fpi_correct logic
             $fpiPrediction = $adjustedFpiSpread > 0 ? 'home' : 'away';
             $actualWinner = $actualMargin > 0 ? 'home' : ($actualMargin < 0 ? 'away' : 'push');
             $fpiCorrect = $actualWinner !== 'push' && $fpiPrediction === $actualWinner;
@@ -74,7 +87,8 @@ class SpreadResult extends Model
         return [
             'result' => $result,
             'fpi_correct' => $fpiCorrect,
-            'fpi_spread' => $fpiSpread
+            'fpi_spread' => $fpiSpread,
+            'fpi_better_than_spread' => $fpiBetterThanSpread
         ];
     }
 
