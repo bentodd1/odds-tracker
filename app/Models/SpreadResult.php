@@ -9,7 +9,15 @@ class SpreadResult extends Model
     protected $fillable = [
         'spread_id',
         'score_id',
-        'result'
+        'result',
+        'fpi_spread',
+        'fpi_correctly_predicted'
+    ];
+
+    protected $casts = [
+        'result' => 'boolean',
+        'fpi_correctly_predicted' => 'boolean',
+        'fpi_spread' => 'decimal:1'
     ];
 
     public function spread()
@@ -27,9 +35,10 @@ class SpreadResult extends Model
      * @param int $homeScore
      * @param int $awayScore
      * @param float $spread Positive means home team gets points, negative means home team gives points
-     * @return string 'home_covered', 'away_covered', or 'push'
+     * @param float|null $fpiSpread FPI spread from home team perspective
+     * @return array Returns ['result' => string, 'fpi_correct' => bool|null]
      */
-    public static function calculateResult($homeScore, $awayScore, $spread)
+    public static function calculateResult($homeScore, $awayScore, $spread, $fpiSpread = null)
     {
         // Calculate actual margin (positive means home team won by that much)
         $actualMargin = $homeScore - $awayScore;
@@ -37,11 +46,21 @@ class SpreadResult extends Model
         // Adjust margin by spread (spread is from home team perspective)
         $adjustedMargin = $actualMargin + $spread;
 
-        if (abs($adjustedMargin) < 0.0001) { // Use small epsilon for float comparison
-            return 'push';
+        $result = abs($adjustedMargin) < 0.0001 ? 'push' : ($adjustedMargin > 0 ? 'home_covered' : 'away_covered');
+
+        // Calculate if FPI was correct (if FPI spread is available)
+        $fpiCorrect = null;
+        if ($fpiSpread !== null) {
+            $fpiAdjustedMargin = $actualMargin + $fpiSpread;
+            $fpiPrediction = $fpiSpread > 0 ? 'home' : 'away';
+            $actualWinner = $actualMargin > 0 ? 'home' : ($actualMargin < 0 ? 'away' : 'push');
+            $fpiCorrect = $actualWinner !== 'push' && $fpiPrediction === $actualWinner;
         }
 
-        return $adjustedMargin > 0 ? 'home_covered' : 'away_covered';
+        return [
+            'result' => $result,
+            'fpi_correct' => $fpiCorrect
+        ];
     }
 
     /**
@@ -49,14 +68,25 @@ class SpreadResult extends Model
      */
     public static function createFromScore(Score $score, Spread $spread)
     {
+        // Calculate FPI spread if both home and away FPI are available
+        $fpiSpread = null;
+        if ($score->home_fpi !== null && $score->away_fpi !== null) {
+            $fpiSpread = round($score->home_fpi - $score->away_fpi, 1);
+        }
+
+        $result = self::calculateResult(
+            $score->home_score,
+            $score->away_score,
+            $spread->spread,
+            $fpiSpread
+        );
+
         return self::create([
             'spread_id' => $spread->id,
             'score_id' => $score->id,
-            'result' => self::calculateResult(
-                $score->home_score,
-                $score->away_score,
-                $spread->spread
-            )
+            'result' => $result['result'],
+            'fpi_spread' => $fpiSpread,
+            'fpi_correctly_predicted' => $result['fpi_correct']
         ]);
     }
 }
