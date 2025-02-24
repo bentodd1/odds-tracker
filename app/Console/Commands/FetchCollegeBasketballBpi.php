@@ -71,7 +71,19 @@ class FetchCollegeBasketballBpi extends Command
 
                     $teamName = trim($teamNode->textContent);
                     // Remove common suffixes for better matching
-                    $teamName = str_replace([' Blue Devils', ' Crimson Tide', ' Volunteers', ' Tigers', ' Cyclones', ' Cougars'], '', $teamName);
+                    $teamName = str_replace(
+                        [' Blue Devils', ' Crimson Tide', ' Volunteers', ' Tigers', ' Cyclones', ' Cougars'],
+                        '',
+                        $teamName
+                    );
+                    
+                    // Special case for teams that need exact matching
+                    if ($teamName === 'Houston') {
+                        $teamName = 'Houston '; // Add trailing space to prevent partial matches
+                    }
+                    if ($teamName === 'Alabama') {
+                        $teamName = 'Alabama '; // Add trailing space to prevent matching with Alabama St
+                    }
                     
                     // Normalize St./Saint/State variations
                     $teamName = preg_replace('/\bSt\.\s+/', 'Saint ', $teamName);
