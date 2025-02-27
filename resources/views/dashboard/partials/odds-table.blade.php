@@ -1,23 +1,4 @@
 {{-- resources/views/dashboard/partials/odds-table.blade.php --}}
-<style>
-    .blur-odds {
-        filter: blur(4px);
-        user-select: none;
-        pointer-events: none;
-    }
-</style>
-
-{{-- Debug output --}}
-@if(auth()->check())
-    <div class="p-2 text-sm">
-        Subscription status: {{ auth()->user()->hasActiveSubscription() ? 'Active' : 'Inactive' }}
-    </div>
-@else
-    <div class="p-2 text-sm">
-        User not logged in
-    </div>
-@endif
-
 <div class="bg-white rounded-lg shadow-md overflow-x-auto">
     <table class="w-full min-w-[1200px]">
         <thead>
@@ -37,7 +18,7 @@
         </tr>
         </thead>
         <tbody>
-        @foreach($games as $index => $game)
+        @foreach($games as $game)
             <!-- Away Team Row -->
             <tr class="border-t">
                 <td rowspan="2" class="p-2 align-middle">
@@ -46,7 +27,7 @@
                 <td class="p-2">
                     <div class="font-medium">{{ $game['away_team']['name'] }}</div>
                 </td>
-                <td class="p-2 text-center {{ (!auth()->user()?->hasActiveSubscription() && $loop->index > 0) ? 'blur-odds' : '' }}">
+                <td class="p-2 text-center">
                     <div>
                         {{ $game['away_team']['fpi'] ? number_format($game['away_team']['fpi'], 1) : 'N/A' }}
                     </div>
@@ -61,7 +42,7 @@
                     @endif
                 </td>
                 @foreach($selectedCasinos as $casinoName)
-                    <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $loop->parent->index > 0) ? 'blur-odds' : '' }}">
+                    <td class="p-2">
                         <div class="flex text-sm">
                             <div class="flex-1 text-center {{
                                         $game['away_team']['best_value']['casino'] === $casinoName &&
@@ -108,7 +89,7 @@
                 <td class="p-2">
                     <div class="font-medium">{{ $game['home_team']['name'] }}</div>
                 </td>
-                <td class="p-2 text-center {{ (!auth()->user()?->hasActiveSubscription() && $loop->index > 0) ? 'blur-odds' : '' }}">
+                <td class="p-2 text-center">
                     <div>
                         {{ $game['home_team']['fpi'] ? number_format($game['home_team']['fpi'], 1) : 'N/A' }}
                     </div>
@@ -123,7 +104,7 @@
                     @endif
                 </td>
                 @foreach($selectedCasinos as $casinoName)
-                    <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $loop->parent->index > 0) ? 'blur-odds' : '' }}">
+                    <td class="p-2">
                         <div class="flex text-sm">
                             <div class="flex-1 text-center {{
                                         $game['home_team']['best_value']['casino'] === $casinoName &&
@@ -167,14 +148,4 @@
         @endforeach
         </tbody>
     </table>
-
-    @unless(auth()->user()?->hasActiveSubscription())
-        <div class="text-center py-4 bg-blue-50">
-            <p class="text-gray-600 mb-2">Subscribe to see all odds and analytics</p>
-            <a href="{{ route('dashboard.subscribe') }}" 
-               class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-                Unlock All Games ($10)
-            </a>
-        </div>
-    @endunless
 </div>

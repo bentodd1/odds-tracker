@@ -43,9 +43,4 @@ return [
         'host' => env('POSTHOG_HOST'),
     ],
 
-    'stripe' => [
-        'key' => env('STRIPE_KEY'),
-        'secret' => env('STRIPE_SECRET'),
-    ],
-
 ];

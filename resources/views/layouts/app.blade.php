@@ -28,7 +28,13 @@
     </div>
 @endif
 
+<x-signup-banner />
+
 @yield('content')
+
+@if(request()->route()->getName() !== 'signup')
+    <x-early-access-modal />
+@endif
 
 <x-footer />
 </body>
