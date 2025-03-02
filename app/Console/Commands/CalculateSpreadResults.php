@@ -70,7 +70,7 @@ class CalculateSpreadResults extends Command
 
         $query->with(['game.scores' => function($query) {
             $query->where('period', 'F');
-        }])
+        }, 'game.homeTeam', 'game.awayTeam', 'casino'])
             ->chunk($chunkSize, function ($spreads) use (&$processedCount, $bar, $chunkSize) {
                 foreach ($spreads as $spread) {
                     try {
@@ -84,7 +84,17 @@ class CalculateSpreadResults extends Command
                             continue;
                         }
 
-                        SpreadResult::createFromScore($score, $spread);
+                        // Create the result and store the return value
+                        $result = SpreadResult::createFromScore($score, $spread);
+                        
+                        if (!$result) {
+                            if ($this->option('debug')) {
+                                $this->newLine();
+                                $this->warn("Failed to create result for spread {$spread->id}");
+                            }
+                            continue;
+                        }
+                        
                         $processedCount++;
                         $bar->advance();
 
@@ -93,7 +103,8 @@ class CalculateSpreadResults extends Command
                             $this->info("Processed spread {$spread->id}: " .
                                 "{$spread->game->homeTeam->name} ({$score->home_score}) vs " .
                                 "{$spread->game->awayTeam->name} ({$score->away_score}), " .
-                                "Spread: {$spread->spread}" .
+                                "Spread: {$spread->spread}, " .
+                                "Result: {$result->result}" .
                                 " [{$spread->casino->name}]");
                         }
 

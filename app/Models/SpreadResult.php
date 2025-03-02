@@ -17,9 +17,10 @@ class SpreadResult extends Model
     ];
 
     protected $casts = [
-        'result' => 'boolean',
         'fpi_correctly_predicted' => 'boolean',
-        'fpi_spread' => 'decimal:1'
+        'fpi_better_than_spread' => 'boolean',
+        'fpi_spread' => 'decimal:1',
+        'fpi_spread_difference' => 'decimal:1'
     ];
 
     public function spread()
@@ -58,8 +59,13 @@ class SpreadResult extends Model
         // Adjust margin by spread (spread is from home team perspective)
         $adjustedMargin = $actualMargin + $spread;
 
+        // Ensure we're using string values for the result
         $result = abs($adjustedMargin) < 0.0001 ? 'push' : ($adjustedMargin > 0 ? 'home_covered' : 'away_covered');
 
+        // Debug output
+        echo "\nCalculated result: " . $result;
+        echo "\nAdjusted margin: " . $adjustedMargin;
+        
         // Calculate FPI spread and prediction if both FPI values are available
         $fpiSpread = null;
         $fpiCorrect = null;
