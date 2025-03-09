@@ -34,7 +34,7 @@ class GameTransformationService
             'nfl' => 2.0,
             'ncaaf' => 2.5,
             'ncaab' => 3.5,
-            'nba' => 2.4,
+            'nba' => 3.5,
             default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
         };
     }

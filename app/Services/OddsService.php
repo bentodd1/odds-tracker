@@ -170,26 +170,59 @@ class OddsService
 
     protected function updateGameScore($game, $gameData)
     {
-        // Only update if the game is finished
-        if (strtolower($gameData['status']) === 'final') {
+        Log::info('Attempting to update game score:', [
+            'game_id' => $game->id,
+            'status' => $gameData['status'],
+            'home_team' => $gameData['home_team'],
+            'away_team' => $gameData['away_team'],
+            'home_score' => $gameData['home_score'],
+            'away_score' => $gameData['away_score']
+        ]);
+
+        try {
             // Check if teams are reversed
             $teamsReversed = (
                 $game->home_team_id === $this->findTeamId($gameData['away_team']) &&
                 $game->away_team_id === $this->findTeamId($gameData['home_team'])
             );
             
+            Log::info('Teams reversed check:', [
+                'reversed' => $teamsReversed,
+                'game_home_team_id' => $game->home_team_id,
+                'game_away_team_id' => $game->away_team_id,
+                'found_home_team_id' => $this->findTeamId($gameData['home_team']),
+                'found_away_team_id' => $this->findTeamId($gameData['away_team'])
+            ]);
+
             $score = new \App\Models\Score([
                 'game_id' => $game->id,
                 'home_score' => $teamsReversed ? $gameData['away_score'] : $gameData['home_score'],
                 'away_score' => $teamsReversed ? $gameData['home_score'] : $gameData['away_score'],
-                'status' => $gameData['status']
+                'period' => 'F',  // Final score
+                'date' => Carbon::parse($gameData['game_date'])
             ]);
             
             $score->save();
             
-            // Update game status if needed
-            $game->status = 'completed';
+            Log::info('Score saved successfully', [
+                'score_id' => $score->id,
+                'home_score' => $score->home_score,
+                'away_score' => $score->away_score
+            ]);
+
+            // Update game status
+            $game->completed = true;
             $game->save();
+
+            Log::info('Game marked as completed', [
+                'game_id' => $game->id
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error saving score:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
         }
     }
 
