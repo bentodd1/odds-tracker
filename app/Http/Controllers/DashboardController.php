@@ -49,7 +49,7 @@ class DashboardController extends Controller
      * @param array $casinoNames
      * @return \Illuminate\Support\Collection
      */
-    private function getFilteredGames(string $sportTitle, array $casinoNames = ['draftkings', 'fanduel', 'betmgm'])
+    private function getFilteredGames(string $sportTitle, array $casinoNames = ['novig', 'draftkings', 'fanduel'])
     {
         // Get casino IDs
         $casinoIds = Casino::whereIn('name', $casinoNames)
@@ -213,7 +213,7 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        $defaultCasinos = ['draftkings', 'fanduel', 'betmgm'];
+        $defaultCasinos = ['novig', 'draftkings', 'fanduel'];
 
         // Handle array or string input
         $selectedCasinos = $request->input('casinos');

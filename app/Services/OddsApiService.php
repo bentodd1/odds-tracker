@@ -62,7 +62,7 @@ class OddsApiService
             $response = Http::accept('application/json')
                 ->get($url, [
                     'apiKey' => $this->apiKey,
-                    'regions' => 'eu,us,uk',
+                    'regions' => 'eu,us,us2,uk,us_ex',
                     'markets' => $markets,
                     'oddsFormat' => 'american'
                 ]);
