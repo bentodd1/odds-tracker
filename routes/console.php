@@ -20,4 +20,9 @@ app(Schedule::class)->command('espn:fetch-nba-bpi')->daily();
 
 app(Schedule::class)->command('match:ncaab-scores')->daily();
 
+// Add Kalshi weather data fetch hourly
+app(Schedule::class)->command('kalshi:fetch-weather')
+                     ->hourly()
+                     ->appendOutputTo(storage_path('logs/kalshi-weather.log'));
+
 
