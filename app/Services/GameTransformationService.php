@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\NCAABMargin;
 use App\Models\NCAAFMargin;
 use App\Models\NflMargin;
+use App\Models\MLBMargin;
 
 
 class GameTransformationService
@@ -35,6 +36,7 @@ class GameTransformationService
             'ncaaf' => 2.5,
             'ncaab' => 3.5,
             'nba' => 3.5,
+            'mlb' => 0.1, // MLB home field advantage is typically very small
             default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
         };
     }
@@ -307,6 +309,7 @@ class GameTransformationService
             'ncaaf' => NCAAFMargin::class,
             'ncaab' => NCAABMargin::class,
             'nba' => NCAABMargin::class,
+            'mlb' => MLBMargin::class,
             default => throw new \InvalidArgumentException("Unsupported sport: {$sport}")
         };
     }

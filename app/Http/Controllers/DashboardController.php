@@ -174,7 +174,7 @@ class DashboardController extends Controller
         $casinos = $this->getCasinos($request);
         $games = $this->getFilteredGames('mlb', $casinos['selectedCasinos']);
 
-        return view('dashboard.coming-soon', [
+        return view('dashboard.mlb', [
             'games' => $games,
             'sport' => 'MLB',
             'availableCasinos' => $casinos['availableCasinos'],
