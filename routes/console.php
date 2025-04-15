@@ -12,6 +12,7 @@ app(Schedule::class)->command('odds:fetch-current americanfootball_nfl')->everyF
 app(Schedule::class)->command('odds:fetch-current americanfootball_ncaaf')->everyFifteenMinutes();
 app(Schedule::class)->command('odds:fetch-current basketball_ncaab')->everyFifteenMinutes();
 app(Schedule::class)->command('odds:fetch-current basketball_nba')->everyFifteenMinutes();
+app(Schedule::class)->command('odds:fetch-current baseball_mlb')->everyFifteenMinutes();
 
 app(Schedule::class)->command('espn:fetch-fpi')->daily();
 app(Schedule::class)->command('espn:fetch-college-fpi')->daily();
