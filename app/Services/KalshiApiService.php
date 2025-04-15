@@ -90,15 +90,15 @@ class KalshiApiService
         $tickers = [];
         $categories = KalshiWeatherCategory::all();
         
-        // For each category, we'll add event tickers with known date patterns
+        // For each category, we'll add event tickers for today and next 2 days
         foreach ($categories as $category) {
             if (!$category->event_prefix) {
                 continue;
             }
             
-            // Get current and next 3 months of potential dates
-            for ($i = 0; $i < 4; $i++) {
-                $date = now()->addMonths($i);
+            // Get today and next 2 days
+            for ($i = 0; $i < 3; $i++) {
+                $date = now('America/Chicago')->addDays($i);
                 // Format like 25APR13
                 $dateStr = $date->format('y') . strtoupper($date->format('M')) . $date->format('d');
                 $tickers[] = [
