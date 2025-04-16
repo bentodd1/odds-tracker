@@ -42,47 +42,57 @@ class Spread extends Model
 
     public function getCoverProbabilityAttribute()
     {
+        // Get the sport key from the game
+        $sportKey = $this->game->sport->key;
+        $sportIdentifier = str_contains($sportKey, '_') ? explode('_', $sportKey)[1] : $sportKey;
+
+        // Map sport to margin model
+        $marginModel = match (strtolower($sportIdentifier)) {
+            'nfl' => NflMargin::class,
+            'ncaaf' => NCAAFMargin::class,
+            'ncaab' => NCAABMargin::class,
+            'nba' => NBAMargin::class,
+            'mlb' => MLBMargin::class,
+            default => throw new \InvalidArgumentException("Unsupported sport: {$sportIdentifier}")
+        };
+
         $spreadValue = abs($this->spread);
         $isHalf = (floor($spreadValue) != $spreadValue);
-        $totalGames = NflMargin::sum('occurrences');
+        $totalGames = $marginModel::sum('occurrences');
 
-        if ($this->spread < 0) {  // Favorite
+        if ($this->spread < 0) {  // Home team is favorite
             if ($isHalf) {
                 // For spreads like -14.5
-                $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-                $probability = (($marginGames / 2) / $totalGames * 100) + 50;
-                return round($probability, 1);
+                return round((($marginGames / 2) / $totalGames * 100) + 50, 1);
             } else {
                 // For spreads like -14
-                $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
                     ->sum('occurrences');
-                $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                $probability = (($marginGames / 2) / $adjustedTotal * 100) + 50;
-                return round($probability, 1);
+                return round((($marginGames / 2) / $adjustedTotal * 100) + 50, 1);
             }
-        } else {  // Underdog
+        } else {  // Home team is underdog
             if ($isHalf) {
                 // For spreads like +14.5
-                $marginGames = NflMargin::where('margin', '<=', floor($spreadValue))
+                $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
                 $favProb = (($marginGames / 2) / $totalGames * 100) + 50;
-                $probability = 100 - $favProb;
-                return round($probability, 1);
+                return round(100 - $favProb, 1);
             } else {
                 // For spreads like +14
-                $marginGames = NflMargin::where('margin', '<=', $spreadValue - 1)
+                $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
                     ->sum('occurrences');
-                $currentMarginGames = NflMargin::where('margin', '=', $spreadValue)
+                $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
                 $favProb = (($marginGames / 2) / $adjustedTotal * 100) + 50;
-                $probability = 100 - $favProb;
-                return round($probability, 1);
+                return round(100 - $favProb, 1);
             }
         }
     }
