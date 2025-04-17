@@ -99,13 +99,25 @@ class Spread extends Model
 
     public function getCoverProbabilityWithJuiceAttribute()
     {
-        // Convert odds directly to implied probability
+        // Get base probability from odds
         $odds = $this->spread < 0 ? $this->home_odds : $this->away_odds;
 
+        // Calculate the raw implied probability from the odds
         if ($odds < 0) {
             $probability = abs($odds) / (abs($odds) + 100) * 100;
         } else {
             $probability = 100 / ($odds + 100) * 100;
+        }
+
+        // Get the spread adjustment from cover_probability
+        $spreadAdjustment = abs($this->cover_probability - 50);
+
+        // For favorites (negative spread), add the spread advantage
+        // For underdogs (positive spread), subtract the spread disadvantage
+        if ($this->spread < 0) {
+            $probability += $spreadAdjustment;
+        } else {
+            $probability -= $spreadAdjustment;
         }
 
         return round($probability, 1);
@@ -113,42 +125,53 @@ class Spread extends Model
 
     public function getHomeCoverProbabilityWithJuiceAttribute()
     {
-        // Get base probability - this is already handling favorite/underdog calculation
-        $baseCoverProb = $this->cover_probability;
-
-        // Calculate juice from home odds
+        // Convert home odds to implied probability
         $odds = $this->home_odds;
+        
         if ($odds < 0) {
-            $juiceProb = abs($odds) / (abs($odds) + 100) * 100;
+            $probability = abs($odds) / (abs($odds) + 100) * 100;
         } else {
-            $juiceProb = 100 / ($odds + 100) * 100;
+            $probability = 100 / ($odds + 100) * 100;
         }
 
-        // Add the juice proportionally to the base probability
-        $juiceAdjustment = ($juiceProb - 50) * ($baseCoverProb / 100);
+        // Get the spread adjustment from cover_probability
+        $spreadAdjustment = abs($this->cover_probability - 50);
 
-        return round($baseCoverProb + $juiceAdjustment, 1);
+        // If home team is favorite (negative spread), add the advantage
+        // If home team is underdog (positive spread), subtract the disadvantage
+        if ($this->spread < 0) {
+            $probability += $spreadAdjustment;
+        } else {
+            $probability -= $spreadAdjustment;
+        }
+
+        return round($probability, 1);
     }
 
     public function getAwayCoverProbabilityWithJuiceAttribute()
     {
-        // Base probability is the opposite of home team's probability
-        $baseCoverProb = 100 - $this->cover_probability;
-
-        // Calculate juice from away odds
+        // Convert away odds to implied probability
         $odds = $this->away_odds;
+        
         if ($odds < 0) {
-            $juiceProb = abs($odds) / (abs($odds) + 100) * 100;
+            $probability = abs($odds) / (abs($odds) + 100) * 100;
         } else {
-            $juiceProb = 100 / ($odds + 100) * 100;
+            $probability = 100 / ($odds + 100) * 100;
         }
 
-        // Add the juice proportionally to the base probability
-        $juiceAdjustment = ($juiceProb - 50) * ($baseCoverProb / 100);
+        // Get the spread adjustment from cover_probability
+        $spreadAdjustment = abs($this->cover_probability - 50);
 
-        return round($baseCoverProb + $juiceAdjustment, 1);
+        // If away team is favorite (positive spread), add the advantage
+        // If away team is underdog (negative spread), subtract the disadvantage
+        if ($this->spread > 0) {
+            $probability += $spreadAdjustment;
+        } else {
+            $probability -= $spreadAdjustment;
+        }
+
+        return round($probability, 1);
     }
-
 
     public function getSpreadProbabilityAttribute()
     {
