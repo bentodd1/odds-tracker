@@ -18,7 +18,7 @@
     function initializeCasinoSelector() {
         const buttons = document.querySelectorAll('.casino-btn');
         const hiddenInput = document.getElementById('selected-casinos');
-        const maxSelections = 3;
+        const maxSelections = 4;
 
         if (!buttons.length || !hiddenInput) {
             console.warn('Casino selector elements not found');

@@ -213,7 +213,7 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        $defaultCasinos = ['novig', 'draftkings', 'fanduel'];
+        $defaultCasinos = ['novig', 'fanduel', 'draftkings', 'betmgm'];
 
         // Handle array or string input
         $selectedCasinos = $request->input('casinos');
@@ -222,7 +222,7 @@ class DashboardController extends Controller
         }
         $selectedCasinos = $selectedCasinos ? explode(',', $selectedCasinos) : $defaultCasinos;
 
-        $selectedCasinos = array_slice($selectedCasinos, 0, 3);
+        $selectedCasinos = array_slice($selectedCasinos, 0, 4);
         $validCasinos = $availableCasinos->pluck('name')->toArray();
         $selectedCasinos = array_intersect($selectedCasinos, $validCasinos);
 

@@ -63,36 +63,80 @@
                 @foreach($selectedCasinos as $casinoName)
                     <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $loop->parent->index > 0) ? 'blur-odds' : '' }}">
                         <div class="flex text-sm">
-                            <div class="flex-1 text-center {{
-                                        $game['away_team']['best_value']['casino'] === $casinoName &&
-                                        $game['away_team']['best_value']['type'] === 'spread'
-                                        ? 'bg-green-100 rounded p-1' : '' }}">
+                            <div class="flex-1 text-center">
                                 @if(isset($game['casinos'][$casinoName]['spread']['away']))
-                                    <div>
-                                        {{ $game['casinos'][$casinoName]['spread']['away']['line'] > 0 ? '+' : '' }}
-                                        {{ $game['casinos'][$casinoName]['spread']['away']['line'] }}
-                                    </div>
-                                    <div class="text-gray-600">
-                                        {{ $game['casinos'][$casinoName]['spread']['away']['odds'] }}
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ number_format($game['casinos'][$casinoName]['spread']['away']['probability'], 1) }}%
+                                    @php
+                                        $currentProb = $game['casinos'][$casinoName]['spread']['away']['probability'];
+                                        $isBestOdds = $game['away_team']['best_value']['casino'] === $casinoName && 
+                                                     $game['away_team']['best_value']['type'] === 'spread';
+                                        
+                                        // Find highest probability among all casinos for this team (both spread and ML)
+                                        $highestProb = $currentProb;
+                                        foreach ($selectedCasinos as $otherCasino) {
+                                            // Check spread probabilities
+                                            if (isset($game['casinos'][$otherCasino]['spread']['away']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['spread']['away']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                            // Check moneyline probabilities
+                                            if (isset($game['casinos'][$otherCasino]['moneyLine']['away']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['moneyLine']['away']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                        }
+                                        
+                                        // Determine if odds are significantly better (>4% lower)
+                                        $isSignificantlyBetter = $currentProb + 4 < $highestProb;
+                                    @endphp
+                                    <div class="{{ $isBestOdds ? ($isSignificantlyBetter ? 'bg-blue-100' : 'bg-green-100') : '' }} rounded p-1">
+                                        <div>
+                                            {{ $game['casinos'][$casinoName]['spread']['away']['line'] > 0 ? '+' : '' }}
+                                            {{ $game['casinos'][$casinoName]['spread']['away']['line'] }}
+                                        </div>
+                                        <div class="text-gray-600">
+                                            {{ $game['casinos'][$casinoName]['spread']['away']['odds'] }}
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ number_format($currentProb, 1) }}%
+                                        </div>
                                     </div>
                                 @else
                                     <div class="text-gray-400">N/A</div>
                                 @endif
                             </div>
-                            <div class="flex-1 text-center {{
-                                        $game['away_team']['best_value']['casino'] === $casinoName &&
-                                        $game['away_team']['best_value']['type'] === 'moneyline'
-                                        ? 'bg-green-100 rounded p-1' : '' }}">
+                            <div class="flex-1 text-center">
                                 @if(isset($game['casinos'][$casinoName]['moneyLine']['away']))
-                                    <div>
-                                        {{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] > 0 ? '+' : '' }}
-                                        {{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] }}
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ number_format($game['casinos'][$casinoName]['moneyLine']['away']['probability'], 1) }}%
+                                    @php
+                                        $currentProb = $game['casinos'][$casinoName]['moneyLine']['away']['probability'];
+                                        $isBestOdds = $game['away_team']['best_value']['casino'] === $casinoName && 
+                                                     $game['away_team']['best_value']['type'] === 'moneyline';
+                                        
+                                        // Find highest probability among all casinos for this team (both spread and ML)
+                                        $highestProb = $currentProb;
+                                        foreach ($selectedCasinos as $otherCasino) {
+                                            // Check spread probabilities
+                                            if (isset($game['casinos'][$otherCasino]['spread']['away']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['spread']['away']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                            // Check moneyline probabilities
+                                            if (isset($game['casinos'][$otherCasino]['moneyLine']['away']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['moneyLine']['away']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                        }
+                                        
+                                        // Determine if odds are significantly better (>4% lower)
+                                        $isSignificantlyBetter = $currentProb + 4 < $highestProb;
+                                    @endphp
+                                    <div class="{{ $isBestOdds ? ($isSignificantlyBetter ? 'bg-blue-100' : 'bg-green-100') : '' }} rounded p-1">
+                                        <div>
+                                            {{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] > 0 ? '+' : '' }}
+                                            {{ $game['casinos'][$casinoName]['moneyLine']['away']['odds'] }}
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ number_format($currentProb, 1) }}%
+                                        </div>
                                     </div>
                                 @else
                                     <div class="text-gray-400">N/A</div>
@@ -125,36 +169,80 @@
                 @foreach($selectedCasinos as $casinoName)
                     <td class="p-2 {{ (!auth()->user()?->hasActiveSubscription() && $loop->parent->index > 0) ? 'blur-odds' : '' }}">
                         <div class="flex text-sm">
-                            <div class="flex-1 text-center {{
-                                        $game['home_team']['best_value']['casino'] === $casinoName &&
-                                        $game['home_team']['best_value']['type'] === 'spread'
-                                        ? 'bg-green-100 rounded p-1' : '' }}">
+                            <div class="flex-1 text-center">
                                 @if(isset($game['casinos'][$casinoName]['spread']['home']))
-                                    <div>
-                                        {{ $game['casinos'][$casinoName]['spread']['home']['line'] > 0 ? '+' : '' }}
-                                        {{ $game['casinos'][$casinoName]['spread']['home']['line'] }}
-                                    </div>
-                                    <div class="text-gray-600">
-                                        {{ $game['casinos'][$casinoName]['spread']['home']['odds'] }}
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ number_format($game['casinos'][$casinoName]['spread']['home']['probability'], 1) }}%
+                                    @php
+                                        $currentProb = $game['casinos'][$casinoName]['spread']['home']['probability'];
+                                        $isBestOdds = $game['home_team']['best_value']['casino'] === $casinoName && 
+                                                     $game['home_team']['best_value']['type'] === 'spread';
+                                        
+                                        // Find highest probability among all casinos for this team (both spread and ML)
+                                        $highestProb = $currentProb;
+                                        foreach ($selectedCasinos as $otherCasino) {
+                                            // Check spread probabilities
+                                            if (isset($game['casinos'][$otherCasino]['spread']['home']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['spread']['home']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                            // Check moneyline probabilities
+                                            if (isset($game['casinos'][$otherCasino]['moneyLine']['home']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['moneyLine']['home']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                        }
+                                        
+                                        // Determine if odds are significantly better (>4% lower)
+                                        $isSignificantlyBetter = $currentProb + 4 < $highestProb;
+                                    @endphp
+                                    <div class="{{ $isBestOdds ? ($isSignificantlyBetter ? 'bg-blue-100' : 'bg-green-100') : '' }} rounded p-1">
+                                        <div>
+                                            {{ $game['casinos'][$casinoName]['spread']['home']['line'] > 0 ? '+' : '' }}
+                                            {{ $game['casinos'][$casinoName]['spread']['home']['line'] }}
+                                        </div>
+                                        <div class="text-gray-600">
+                                            {{ $game['casinos'][$casinoName]['spread']['home']['odds'] }}
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ number_format($currentProb, 1) }}%
+                                        </div>
                                     </div>
                                 @else
                                     <div class="text-gray-400">N/A</div>
                                 @endif
                             </div>
-                            <div class="flex-1 text-center {{
-                                        $game['home_team']['best_value']['casino'] === $casinoName &&
-                                        $game['home_team']['best_value']['type'] === 'moneyline'
-                                        ? 'bg-green-100 rounded p-1' : '' }}">
+                            <div class="flex-1 text-center">
                                 @if(isset($game['casinos'][$casinoName]['moneyLine']['home']))
-                                    <div>
-                                        {{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] > 0 ? '+' : '' }}
-                                        {{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] }}
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ number_format($game['casinos'][$casinoName]['moneyLine']['home']['probability'], 1) }}%
+                                    @php
+                                        $currentProb = $game['casinos'][$casinoName]['moneyLine']['home']['probability'];
+                                        $isBestOdds = $game['home_team']['best_value']['casino'] === $casinoName && 
+                                                     $game['home_team']['best_value']['type'] === 'moneyline';
+                                        
+                                        // Find highest probability among all casinos for this team (both spread and ML)
+                                        $highestProb = $currentProb;
+                                        foreach ($selectedCasinos as $otherCasino) {
+                                            // Check spread probabilities
+                                            if (isset($game['casinos'][$otherCasino]['spread']['home']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['spread']['home']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                            // Check moneyline probabilities
+                                            if (isset($game['casinos'][$otherCasino]['moneyLine']['home']['probability'])) {
+                                                $otherProb = $game['casinos'][$otherCasino]['moneyLine']['home']['probability'];
+                                                $highestProb = max($highestProb, $otherProb);
+                                            }
+                                        }
+                                        
+                                        // Determine if odds are significantly better (>4% lower)
+                                        $isSignificantlyBetter = $currentProb + 4 < $highestProb;
+                                    @endphp
+                                    <div class="{{ $isBestOdds ? ($isSignificantlyBetter ? 'bg-blue-100' : 'bg-green-100') : '' }} rounded p-1">
+                                        <div>
+                                            {{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] > 0 ? '+' : '' }}
+                                            {{ $game['casinos'][$casinoName]['moneyLine']['home']['odds'] }}
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ number_format($currentProb, 1) }}%
+                                        </div>
                                     </div>
                                 @else
                                     <div class="text-gray-400">N/A</div>
