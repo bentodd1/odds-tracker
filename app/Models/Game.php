@@ -56,4 +56,9 @@ class Game extends Model
     {
         return $this->hasMany(MoneyLine::class);
     }
+
+    public function dratingsPredictions()
+    {
+        return $this->hasMany(DratingsPrediction::class);
+    }
 }

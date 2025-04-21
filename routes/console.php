@@ -21,6 +21,17 @@ app(Schedule::class)->command('espn:fetch-nba-bpi')->daily();
 
 app(Schedule::class)->command('match:ncaab-scores')->daily();
 
+// Dratings MLB predictions - run at 6 PM and 11:59 PM Central Time
+app(Schedule::class)->command('dratings:fetch-mlb')
+                    ->timezone('America/Chicago')
+                    ->at('18:00')
+                    ->appendOutputTo(storage_path('logs/dratings-mlb.log'));
+
+app(Schedule::class)->command('dratings:fetch-mlb')
+                    ->timezone('America/Chicago')
+                    ->at('23:59')
+                    ->appendOutputTo(storage_path('logs/dratings-mlb.log'));
+
 // Add Kalshi weather data fetch hourly
 app(Schedule::class)->command('kalshi:fetch-weather')
                      ->hourly()

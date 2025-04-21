@@ -110,6 +110,23 @@ class GameTransformationService
 
     private function calculateFpiData($game)
     {
+        // Special handling for MLB games - use Dratings probabilities if available
+        if ($game->sport->key === 'baseball_mlb') {
+            $latestPrediction = $game->dratingsPredictions()
+                ->latest('recorded_at')
+                ->first();
+
+            if ($latestPrediction) {
+                return [
+                    'home_fpi' => null, // MLB doesn't use FPI
+                    'away_fpi' => null,
+                    'home_win_probability' => $latestPrediction->home_win_probability,
+                    'away_win_probability' => $latestPrediction->away_win_probability
+                ];
+            }
+        }
+
+        // Existing FPI calculation for other sports
         $homeTeamFpi = $game->homeTeam->latestFpi()->first();
         $awayTeamFpi = $game->awayTeam->latestFpi()->first();
         if (!$homeTeamFpi || !$awayTeamFpi) {

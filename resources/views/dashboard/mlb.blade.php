@@ -11,7 +11,7 @@
             :sport="$sport" />
 
         <!-- Main Odds Table -->
-        @include('dashboard.partials.odds-table', [
+        @include('dashboard.partials.mlb-odds-table', [
             'games' => $games,
             'selectedCasinos' => $selectedCasinos
         ])
