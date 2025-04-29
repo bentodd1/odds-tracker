@@ -43,4 +43,10 @@ app(Schedule::class)->command('fetch:weather-data')
                      ->dailyAt('01:00')
                      ->appendOutputTo(storage_path('logs/accuweather.log'));
 
+// Record actual weather data daily at 2 AM Central Time (after predictions are collected)
+app(Schedule::class)->command('weather:record-current')
+                     ->timezone('America/Chicago')
+                     ->dailyAt('02:00')
+                     ->appendOutputTo(storage_path('logs/weather-current.log'));
+
 
