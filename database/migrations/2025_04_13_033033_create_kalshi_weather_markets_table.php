@@ -28,9 +28,11 @@ return new class extends Migration
             $table->float('liquidity')->default(0);
             $table->text('rules_primary')->nullable();
             $table->timestamp('last_updated_at');
+            $table->timestamp('collected_at');
             $table->timestamps();
             
             $table->index('event_ticker');
+            $table->index('collected_at');
         });
     }
 

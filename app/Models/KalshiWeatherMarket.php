@@ -25,12 +25,14 @@ class KalshiWeatherMarket extends Model
         'open_interest',
         'liquidity',
         'rules_primary',
-        'last_updated_at'
+        'last_updated_at',
+        'collected_at'
     ];
 
     protected $casts = [
         'close_time' => 'datetime',
         'last_updated_at' => 'datetime',
+        'collected_at' => 'datetime',
         'yes_ask' => 'float',
         'yes_bid' => 'float',
         'no_ask' => 'float',

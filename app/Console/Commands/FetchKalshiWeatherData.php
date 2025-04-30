@@ -121,42 +121,27 @@ class FetchKalshiWeatherData extends Command
     protected function processMarket(array $market, string $eventTicker, ?int $categoryId)
     {
         try {
-            if (!isset($market['ticker']) || !isset($market['title'])) {
-                if ($this->debug) {
-                    $this->warn("Skipping market - missing required fields");
-                }
-                return;
-            }
-            
-            $marketData = [
+            // Create a new record with the current timestamp
+            KalshiWeatherMarket::create([
                 'category_id' => $categoryId,
                 'event_ticker' => $eventTicker,
                 'ticker' => $market['ticker'],
                 'title' => $market['title'],
-                'status' => isset($market['status']) ? $market['status'] : 'unknown',
-                'close_time' => isset($market['close_time']) ? Carbon::parse($market['close_time']) : null,
-                'yes_ask' => isset($market['yes_ask']) ? $market['yes_ask'] : null,
-                'yes_bid' => isset($market['yes_bid']) ? $market['yes_bid'] : null,
-                'no_ask' => isset($market['no_ask']) ? $market['no_ask'] : null,
-                'no_bid' => isset($market['no_bid']) ? $market['no_bid'] : null,
-                'volume' => isset($market['volume']) ? $market['volume'] : 0,
-                'open_interest' => isset($market['open_interest']) ? $market['open_interest'] : 0,
-                'liquidity' => isset($market['liquidity']) ? $market['liquidity'] : 0,
-                'rules_primary' => isset($market['rules_primary']) ? $market['rules_primary'] : null,
+                'status' => $market['status'],
+                'close_time' => $market['close_time'],
+                'yes_ask' => $market['yes_ask'] ?? null,
+                'yes_bid' => $market['yes_bid'] ?? null,
+                'no_ask' => $market['no_ask'] ?? null,
+                'no_bid' => $market['no_bid'] ?? null,
+                'volume' => $market['volume'] ?? null,
+                'open_interest' => $market['open_interest'] ?? null,
+                'liquidity' => $market['liquidity'] ?? null,
+                'rules_primary' => $market['rules_primary'] ?? null,
                 'last_updated_at' => now(),
-            ];
-            
-            KalshiWeatherMarket::updateOrCreate(
-                ['ticker' => $market['ticker']],
-                $marketData
-            );
-            
-            if ($this->debug) {
-                $this->line("Processed market: {$market['ticker']} - {$market['title']}");
-                if ($categoryId) {
-                    $this->line("  Category ID: {$categoryId}");
-                }
-            }
+                'collected_at' => now(),
+            ]);
+
+            $this->info("Created new market record for {$market['ticker']}");
         } catch (\Exception $e) {
             $tickerName = isset($market['ticker']) ? $market['ticker'] : 'unknown';
             $this->error("Error processing market {$tickerName}: " . $e->getMessage());
