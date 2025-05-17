@@ -37,11 +37,16 @@ class RecordCurrentWeather extends Command
         $this->info("Processing weather data for {$targetDateStr}");
 
         foreach ($this->nwsStations as $city => $station) {
-            // Get or create prediction for the target date
-            $prediction = AccuWeatherPrediction::firstOrNew([
+            // Get all predictions for this city and date
+            $predictions = AccuWeatherPrediction::where([
                 'city' => $city,
                 'target_date' => $targetDateStr
-            ]);
+            ])->get();
+
+            if ($predictions->isEmpty()) {
+                $this->info("No predictions found for {$city} on {$targetDateStr}");
+                continue;
+            }
 
             // Fetch NWS observation history
             $url = "https://forecast.weather.gov/data/obhistory/{$station}.html";
@@ -93,25 +98,29 @@ class RecordCurrentWeather extends Command
                 $currentHigh = !empty($maxTemps) ? max($maxTemps) : null;
                 $currentLow = !empty($minTemps) ? min($minTemps) : null;
                 
-                // Update high if needed
-                if ($currentHigh !== null && (!isset($prediction->actual_high) || $currentHigh > $prediction->actual_high)) {
-                    $prediction->actual_high = $currentHigh;
-                }
+                // Update all predictions for this city and date
+                foreach ($predictions as $prediction) {
+                    // Update high if needed
+                    if ($currentHigh !== null && (!isset($prediction->actual_high) || $currentHigh > $prediction->actual_high)) {
+                        $prediction->actual_high = $currentHigh;
+                    }
 
-                // Update low if needed
-                if ($currentLow !== null && (!isset($prediction->actual_low) || $currentLow < $prediction->actual_low)) {
-                    $prediction->actual_low = $currentLow;
-                }
+                    // Update low if needed
+                    if ($currentLow !== null && (!isset($prediction->actual_low) || $currentLow < $prediction->actual_low)) {
+                        $prediction->actual_low = $currentLow;
+                    }
 
-                // If we have predicted values, calculate differences
-                if (isset($prediction->predicted_high) && $currentHigh !== null) {
-                    $prediction->high_difference = $prediction->predicted_high - $prediction->actual_high;
-                }
-                if (isset($prediction->predicted_low) && $currentLow !== null) {
-                    $prediction->low_difference = $prediction->predicted_low - $prediction->actual_low;
-                }
+                    // If we have predicted values, calculate differences
+                    if (isset($prediction->predicted_high) && $currentHigh !== null) {
+                        $prediction->high_difference = $prediction->predicted_high - $prediction->actual_high;
+                    }
+                    if (isset($prediction->predicted_low) && $currentLow !== null) {
+                        $prediction->low_difference = $prediction->predicted_low - $prediction->actual_low;
+                    }
 
-                $prediction->save();
+                    $prediction->save();
+                }
+                
                 $this->info("Updated NWS weather data for {$city}: High {$currentHigh}°F, Low {$currentLow}°F");
             }
         }

@@ -54,7 +54,7 @@ class FetchHistoricalSpreads extends Command
             $this->info("\nProcessing {$dateString}");
 
             try {
-                $odds = $this->oddsApi->getHistoricalOdds($sportKey, $dateString);
+                $odds = $this->oddsApi->getHistoricalOdds($sportKey, $dateString, 'h2h', $region);
 
                 if ($this->debug) {
                     $this->info("API Response for {$dateString}:");

@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Models\Game;
 
 class OddsApiService
 {
@@ -21,7 +22,7 @@ class OddsApiService
         $this->region = $region;
     }
 
-    public function getHistoricalOdds($sportKey, $date)
+    public function getHistoricalOdds($sportKey, $date, $markets = 'spreads', $region = null)
     {
         try {
             $isoDate = Carbon::parse($date)->toIso8601ZuluString();
@@ -31,8 +32,8 @@ class OddsApiService
             $response = Http::accept('application/json')
                 ->get($url, [
                     'apiKey' => $this->apiKey,
-                    'regions' => $this->region,
-                    'markets' => 'spreads',
+                    'regions' => $region ?? $this->region,
+                    'markets' => $markets,
                     'oddsFormat' => 'american',
                     'date' => $isoDate
                 ]);
@@ -107,6 +108,41 @@ class OddsApiService
         } catch (\Exception $e) {
             Log::error('Error fetching sports: ' . $e->getMessage());
             throw $e;
+        }
+    }
+
+    public function processGame($gameData, $sport, $homeTeam, $awayTeam)
+    {
+        $commenceTime = Carbon::parse($gameData['commence_time']);
+
+        // Try to find an existing game by teams and commence time (±12 hours)
+        $game = Game::where('sport_id', $sport->id)
+            ->where('home_team_id', $homeTeam->id)
+            ->where('away_team_id', $awayTeam->id)
+            ->whereBetween('commence_time', [
+                $commenceTime->copy()->subHours(12),
+                $commenceTime->copy()->addHours(12)
+            ])
+            ->first();
+
+        if ($game) {
+            // Update the game if needed
+            $game->update([
+                'commence_time' => $commenceTime,
+                'completed' => true,
+                // ... any other fields you want to update
+            ]);
+        } else {
+            // Create a new game
+            $game = Game::create([
+                'sport_id' => $sport->id,
+                'home_team_id' => $homeTeam->id,
+                'away_team_id' => $awayTeam->id,
+                'commence_time' => $commenceTime,
+                'season' => $gameData['season'] ?? null,
+                'completed' => true,
+                // 'game_id' => $gameData['id'], // Optionally store the Odds API id for reference
+            ]);
         }
     }
 }

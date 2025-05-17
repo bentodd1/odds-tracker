@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\DB;
 
 class FetchHistoricalOverUnders extends Command
 {
-    protected $signature = 'odds:fetch-historical-overunders {sportKey=americanfootball_nfl : The sport key to fetch for}';
+    protected $signature = 'odds:fetch-historical-overunders 
+        {sportKey=americanfootball_nfl : The sport key to fetch for}
+        {--start-date= : Optional start date (YYYY-MM-DD)}';
     protected $description = 'Fetch historical over/unders from The Odds API';
 
     private $apiKey = '56a885ebf57cc92936f9c8bba25df6d1';
@@ -22,6 +24,7 @@ class FetchHistoricalOverUnders extends Command
     {
         $sportKey = $this->argument('sportKey');
         $defaultStartDate = '2023-01-01';
+        $startDate = $this->option('start-date') ?? $defaultStartDate;
 
         $sport = Sport::where('key', $sportKey)->first();
         if (!$sport) {
@@ -39,7 +42,7 @@ class FetchHistoricalOverUnders extends Command
 
         $currentDate = $lastOverUnder
             ? Carbon::parse($lastOverUnder->recorded_at)->addDay()
-            : Carbon::parse($defaultStartDate);
+            : Carbon::parse($startDate);
 
         while ($currentDate->lte(now())) {
             $dateString = $currentDate->format('Y-m-d');
