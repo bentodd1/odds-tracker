@@ -5,7 +5,7 @@
     <div class="container mx-auto px-4 py-4">
         <div class="flex justify-between items-center">
             <a href="{{ route('home') }}" class="text-xl font-bold text-blue-600">Smart Betting Analytics</a>
-            
+
             <div class="flex items-center space-x-4">
                 <div class="space-x-4">
                     <a href="{{ route('dashboard.nfl') }}"
@@ -32,12 +32,16 @@
                        class="{{ $currentPage === 'nhl' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
                         NHL
                     </a>
+                    <a href="{{ route('accuweather.analysis') }}"
+                       class="{{ $currentPage === 'accuweather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
+                        Weather Analysis
+                    </a>
                 </div>
 
                 <div class="flex items-center space-x-4 ml-4">
                     @auth
                         @unless(auth()->user()->hasActiveSubscription())
-                            <a href="{{ route('dashboard.subscribe') }}" 
+                            <a href="{{ route('dashboard.subscribe') }}"
                                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                                Unlock All Odds ($10)
                             </a>
@@ -50,9 +54,9 @@
                             </button>
                         </form>
                     @else
-                        <a href="{{ route('login') }}" 
+                        <a href="{{ route('login') }}"
                            class="text-gray-600 hover:text-blue-600">Login</a>
-                        <a href="{{ route('register') }}" 
+                        <a href="{{ route('register') }}"
                            class="text-blue-600 hover:text-blue-700">Sign Up to Unlock</a>
                     @endauth
                 </div>
