@@ -28,5 +28,9 @@
            class="{{ $currentPage === 'nhl' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-gray-800' }}">
             NHL
         </a>
+        <a href="{{ route('accuweather.analysis') }}"
+           class="{{ $currentPage === 'accuweather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-gray-800' }}">
+            Weather Analysis
+        </a>
     </div>
 </div>
