@@ -69,6 +69,13 @@ class KalshiApiService
                 'location' => 'Denver, CO',
                 'event_prefix' => 'KXHIGHDEN'
             ],
+            [
+                'name' => 'Los Angeles Temperature',
+                'slug' => 'los-angeles-temperature',
+                'description' => 'Temperature forecasts for Los Angeles, California',
+                'location' => 'Los Angeles, CA',
+                'event_prefix' => 'KXHIGHLAX'
+            ],
             // Add more default categories as needed
         ];
         

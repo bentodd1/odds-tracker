@@ -121,7 +121,10 @@ class FetchKalshiWeatherData extends Command
     protected function processMarket(array $market, string $eventTicker, ?int $categoryId)
     {
         try {
-            // Create a new record with the current timestamp
+            if ($this->debug) {
+                $this->info("Market data (raw API response): " . json_encode($market));
+            }
+            // Always create a new record with the current timestamp
             KalshiWeatherMarket::create([
                 'category_id' => $categoryId,
                 'event_ticker' => $eventTicker,
