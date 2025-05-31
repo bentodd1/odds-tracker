@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\AccuWeatherPrediction;
+use App\Models\WeatherTemperature;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -98,6 +99,20 @@ class RecordCurrentWeather extends Command
                 $currentHigh = !empty($maxTemps) ? max($maxTemps) : null;
                 $currentLow = !empty($minTemps) ? min($minTemps) : null;
                 
+                // Store in weather_temperatures table
+                WeatherTemperature::updateOrCreate(
+                    [
+                        'location' => $city,
+                        'date' => $targetDateStr,
+                        'source' => 'nws',
+                    ],
+                    [
+                        'high_temperature' => $currentHigh,
+                        'low_temperature' => $currentLow,
+                        'collected_at' => now(),
+                    ]
+                );
+
                 // Update all predictions for this city and date
                 foreach ($predictions as $prediction) {
                     // Update high if needed
@@ -121,7 +136,7 @@ class RecordCurrentWeather extends Command
                     $prediction->save();
                 }
                 
-                $this->info("Updated NWS weather data for {$city}: High {$currentHigh}°F, Low {$currentLow}°F");
+                $this->info("Updated weather data for {$city}: High {$currentHigh}°F, Low {$currentLow}°F");
             }
         }
     }
