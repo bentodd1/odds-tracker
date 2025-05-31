@@ -31,4 +31,10 @@ class KalshiWeatherEvent extends Model
     {
         return $this->hasMany(KalshiWeatherMarket::class, 'event_id');
     }
+
+    public function actualTemperatures()
+    {
+        return $this->hasMany(WeatherTemperature::class, 'location', 'location')
+            ->whereDate('date', $this->target_date);
+    }
 } 
