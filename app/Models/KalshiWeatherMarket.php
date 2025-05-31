@@ -5,48 +5,60 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KalshiWeatherMarket extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'category_id',
+        'event_id',
         'event_ticker',
         'ticker',
         'title',
         'status',
         'close_time',
-        'yes_ask',
-        'yes_bid',
-        'no_ask',
-        'no_bid',
-        'volume',
-        'open_interest',
-        'liquidity',
-        'rules_primary',
         'last_updated_at',
-        'collected_at'
+        'collected_at',
+        'strike_type',
+        'floor_strike',
+        'cap_strike',
+        'single_strike',
+        'low_temperature',
+        'high_temperature',
+        'rules_primary',
+        'rules_secondary',
     ];
 
     protected $casts = [
         'close_time' => 'datetime',
         'last_updated_at' => 'datetime',
         'collected_at' => 'datetime',
-        'yes_ask' => 'float',
-        'yes_bid' => 'float',
-        'no_ask' => 'float',
-        'no_bid' => 'float',
-        'volume' => 'float',
-        'open_interest' => 'float',
-        'liquidity' => 'float',
+        'floor_strike' => 'integer',
+        'cap_strike' => 'integer',
+        'single_strike' => 'integer',
+        'low_temperature' => 'integer',
+        'high_temperature' => 'integer',
     ];
 
-    /**
-     * Get the category that owns the market
-     */
-    public function category(): BelongsTo
+    public function event(): BelongsTo
     {
-        return $this->belongsTo(KalshiWeatherCategory::class, 'category_id');
+        return $this->belongsTo(KalshiWeatherEvent::class);
+    }
+
+    public function states(): HasMany
+    {
+        return $this->hasMany(KalshiWeatherMarketState::class, 'market_id');
+    }
+
+    public function latestState()
+    {
+        return $this->hasOne(KalshiWeatherMarketState::class, 'market_id')
+            ->latest('collected_at');
+    }
+
+    public function accuWeatherPredictions(): HasMany
+    {
+        return $this->hasMany(AccuWeatherPrediction::class);
     }
 } 
