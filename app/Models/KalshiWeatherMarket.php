@@ -28,6 +28,7 @@ class KalshiWeatherMarket extends Model
         'high_temperature',
         'rules_primary',
         'rules_secondary',
+        'weather_temperature_id',
     ];
 
     protected $casts = [
@@ -60,5 +61,10 @@ class KalshiWeatherMarket extends Model
     public function accuWeatherPredictions(): HasMany
     {
         return $this->hasMany(AccuWeatherPrediction::class);
+    }
+
+    public function actualTemperature()
+    {
+        return $this->belongsTo(WeatherTemperature::class, 'weather_temperature_id');
     }
 } 
