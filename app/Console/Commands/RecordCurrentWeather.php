@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\AccuWeatherPrediction;
 use App\Models\WeatherTemperature;
+use App\Models\KalshiWeatherEvent;
+use App\Models\KalshiWeatherMarket;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -12,8 +14,12 @@ use DOMXPath;
 
 class RecordCurrentWeather extends Command
 {
-    protected $signature = 'weather:record-current {date?}';
+    protected $signature = 'weather:record-current 
+                            {date? : The date to process (default: yesterday)}
+                            {--debug : Show debug information}';
     protected $description = 'Record weather data for all cities. Defaults to yesterday if no date provided.';
+
+    protected $debug = false;
 
     protected $nwsStations = [
         'Austin' => 'KAUS',      // Austin-Bergstrom International Airport
@@ -27,6 +33,7 @@ class RecordCurrentWeather extends Command
 
     public function handle()
     {
+        $this->debug = $this->option('debug');
         // Get the target date, defaulting to yesterday
         $targetDate = $this->argument('date') 
             ? Carbon::parse($this->argument('date'))->setTimezone('America/Chicago')
@@ -38,16 +45,11 @@ class RecordCurrentWeather extends Command
         $this->info("Processing weather data for {$targetDateStr}");
 
         foreach ($this->nwsStations as $city => $station) {
-            // Get all predictions for this city and date
+            // Get predictions for this city and date (but don't require them)
             $predictions = AccuWeatherPrediction::where([
                 'city' => $city,
                 'target_date' => $targetDateStr
             ])->get();
-
-            if ($predictions->isEmpty()) {
-                $this->info("No predictions found for {$city} on {$targetDateStr}");
-                continue;
-            }
 
             // Fetch NWS observation history
             $url = "https://forecast.weather.gov/data/obhistory/{$station}.html";
@@ -100,7 +102,7 @@ class RecordCurrentWeather extends Command
                 $currentLow = !empty($minTemps) ? min($minTemps) : null;
                 
                 // Store in weather_temperatures table
-                WeatherTemperature::updateOrCreate(
+                $temperature = WeatherTemperature::updateOrCreate(
                     [
                         'location' => $city,
                         'date' => $targetDateStr,
@@ -113,30 +115,59 @@ class RecordCurrentWeather extends Command
                     ]
                 );
 
-                // Update all predictions for this city and date
-                foreach ($predictions as $prediction) {
-                    // Update high if needed
-                    if ($currentHigh !== null && (!isset($prediction->actual_high) || $currentHigh > $prediction->actual_high)) {
-                        $prediction->actual_high = $currentHigh;
+                // Find all events for this location and date
+                $events = KalshiWeatherEvent::where('location', $city)
+                    ->whereDate('target_date', $targetDateStr)
+                    ->get();
+
+                // Link markets to temperature if we have events
+                if (!$events->isEmpty()) {
+                    $markets = KalshiWeatherMarket::whereIn('event_id', $events->pluck('id'))
+                        ->whereNull('weather_temperature_id')
+                        ->where(function($query) {
+                            $query->whereNotNull('high_temperature')
+                                ->orWhereNotNull('low_temperature');
+                        })
+                        ->get();
+
+                    foreach ($markets as $market) {
+                        $market->weather_temperature_id = $temperature->id;
+                        $market->save();
                     }
 
-                    // Update low if needed
-                    if ($currentLow !== null && (!isset($prediction->actual_low) || $currentLow < $prediction->actual_low)) {
-                        $prediction->actual_low = $currentLow;
+                    if ($this->debug) {
+                        $this->info("Linked {$markets->count()} markets to temperature record");
                     }
+                }
 
-                    // If we have predicted values, calculate differences
-                    if (isset($prediction->predicted_high) && $currentHigh !== null) {
-                        $prediction->high_difference = $prediction->predicted_high - $prediction->actual_high;
-                    }
-                    if (isset($prediction->predicted_low) && $currentLow !== null) {
-                        $prediction->low_difference = $prediction->predicted_low - $prediction->actual_low;
-                    }
+                // Update predictions if we have any
+                if (!$predictions->isEmpty()) {
+                    foreach ($predictions as $prediction) {
+                        // Update high if needed
+                        if ($currentHigh !== null && (!isset($prediction->actual_high) || $currentHigh > $prediction->actual_high)) {
+                            $prediction->actual_high = $currentHigh;
+                        }
 
-                    $prediction->save();
+                        // Update low if needed
+                        if ($currentLow !== null && (!isset($prediction->actual_low) || $currentLow < $prediction->actual_low)) {
+                            $prediction->actual_low = $currentLow;
+                        }
+
+                        // If we have predicted values, calculate differences
+                        if (isset($prediction->predicted_high) && $currentHigh !== null) {
+                            $prediction->high_difference = $prediction->predicted_high - $prediction->actual_high;
+                        }
+                        if (isset($prediction->predicted_low) && $currentLow !== null) {
+                            $prediction->low_difference = $prediction->predicted_low - $prediction->actual_low;
+                        }
+
+                        $prediction->save();
+                    }
                 }
                 
-                $this->info("Updated weather data for {$city}: High {$currentHigh}°F, Low {$currentLow}°F");
+                $this->info("Recorded weather data for {$city}: High {$currentHigh}°F, Low {$currentLow}°F");
+            } else {
+                $this->warn("No temperature data found for {$city} on {$targetDateStr}");
             }
         }
     }
