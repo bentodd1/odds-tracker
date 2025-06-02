@@ -8,6 +8,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\WeatherPredictionController;
 use App\Http\Controllers\AccuWeatherAnalysisController;
+use App\Http\Controllers\NwsWeatherAnalysisController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware([TrackVisitor::class])->group(function () {
@@ -46,4 +47,7 @@ Route::middleware([TrackVisitor::class])->group(function () {
     
     // AccuWeather analysis route
     Route::get('/accuweather/analysis', [AccuWeatherAnalysisController::class, 'index'])->name('accuweather.analysis');
+    
+    // NWS analysis route
+    Route::get('/nws/analysis', [NwsWeatherAnalysisController::class, 'index'])->name('nws.analysis');
 });

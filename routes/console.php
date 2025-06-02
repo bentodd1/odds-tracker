@@ -3,6 +3,7 @@
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule as ScheduleFacade;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -48,5 +49,25 @@ app(Schedule::class)->command('weather:record-current')
                      ->timezone('America/Chicago')
                      ->dailyAt('02:00')
                      ->appendOutputTo(storage_path('logs/weather-current.log'));
+
+// Schedule NWS weather data fetching for today and tomorrow
+$today = now()->toDateString();
+$tomorrow = now()->addDay()->toDateString();
+
+app(Schedule::class)->command("weather:fetch-nws --date={$today}")
+    ->hourly()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/nws-weather.log'));
+
+app(Schedule::class)->command("weather:fetch-nws --date={$tomorrow}")
+    ->hourly()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/nws-weather.log'));
+
+// Schedule NWS actual weather recording
+app(Schedule::class)->command('weather:record-nws-actual')
+    ->dailyAt('01:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/nws-actual.log'));
 
 
