@@ -325,7 +325,10 @@ class FetchKalshiWeatherData extends Command
             'LAX' => 'Los Angeles, CA',
             'DEN' => 'Denver, CO',
             'NY' => 'New York, NY',
-            // Add more mappings as needed
+            'CHI' => 'Chicago, IL',
+            'AUS' => 'Austin, TX',
+            'MIA' => 'Miami, FL',
+            'PHIL' => 'Philadelphia, PA'
         ];
 
         if (preg_match('/KXHIGH([A-Z]{2,3})/', $ticker, $matches)) {
