@@ -168,6 +168,9 @@ class FetchKalshiWeatherData extends Command
                     'high_temperature' => $tempInfo['high_temperature'],
                     'rules_primary' => $marketData['rules_primary'] ?? null,
                     'rules_secondary' => $marketData['rules_secondary'] ?? null,
+                    'location' => $event->location,
+                    'target_date' => $event->target_date,
+                    'category_id' => $event->category_id,
                 ]
             );
 

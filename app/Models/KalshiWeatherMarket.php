@@ -29,6 +29,9 @@ class KalshiWeatherMarket extends Model
         'rules_primary',
         'rules_secondary',
         'weather_temperature_id',
+        'location',
+        'target_date',
+        'category_id',
     ];
 
     protected $casts = [
@@ -40,6 +43,8 @@ class KalshiWeatherMarket extends Model
         'single_strike' => 'integer',
         'low_temperature' => 'integer',
         'high_temperature' => 'integer',
+        'target_date' => 'date',
+        'category_id' => 'integer',
     ];
 
     public function event(): BelongsTo
@@ -66,5 +71,10 @@ class KalshiWeatherMarket extends Model
     public function actualTemperature()
     {
         return $this->belongsTo(WeatherTemperature::class, 'weather_temperature_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(KalshiWeatherCategory::class);
     }
 } 
