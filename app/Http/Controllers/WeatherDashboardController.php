@@ -34,22 +34,19 @@ class WeatherDashboardController extends Controller
                 ->get()
                 ->keyBy('target_date');
 
-            // Kalshi markets for this city and selected date
-            $kalshiMarkets = \App\Models\KalshiWeatherMarket::whereHas('event', function($q) use ($city, $selectedDate) {
-                $q->where('location', $city)
-                  ->whereDate('target_date', $selectedDate);
-            })
-            ->with(['states' => function($query) use ($selectedDate) {
-                $closeDate = Carbon::parse($selectedDate)->addDay()->toDateString();
-                $query->whereDate('close_time', $closeDate)
-                      ->orderByDesc('collected_at');
-            }])
-            ->get()
-            ->map(function($market) {
-                // Only keep the most recent state for the market
-                $market->filtered_state = $market->states->first();
-                return $market;
-            });
+            // Kalshi markets for this city and selected date (no more KalshiWeatherEvent)
+            $kalshiMarkets = \App\Models\KalshiWeatherMarket::where('location', $city)
+                ->whereDate('target_date', $selectedDate)
+                ->with(['states' => function($query) use ($selectedDate) {
+                    $closeDate = Carbon::parse($selectedDate)->addDay()->toDateString();
+                    $query->whereDate('close_time', $closeDate)
+                          ->orderByDesc('collected_at');
+                }])
+                ->get()
+                ->map(function($market) {
+                    $market->filtered_state = $market->states->first();
+                    return $market;
+                });
 
             // Calculate hours until 3PM local time for each city
             $cityTimeZone = match($city) {
