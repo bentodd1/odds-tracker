@@ -23,18 +23,15 @@ class WeatherDashboardController extends Controller
 
         foreach ($cities as $city) {
             $accuweather = AccuWeatherPrediction::where('city', $city)
-                ->whereIn('target_date', $targetDates)
+                ->where('target_date', $selectedDate)
                 ->orderBy('prediction_time', 'desc')
-                ->get()
-                ->keyBy('target_date');
+                ->first();
 
             $nws = NwsWeatherPrediction::where('city', $city)
-                ->whereIn('target_date', $targetDates)
+                ->where('target_date', $selectedDate)
                 ->orderBy('prediction_time', 'desc')
-                ->get()
-                ->keyBy('target_date');
+                ->first();
 
-            // Kalshi markets for this city and selected date (no more KalshiWeatherEvent)
             $kalshiMarkets = \App\Models\KalshiWeatherMarket::where('location', $city)
                 ->whereDate('target_date', $selectedDate)
                 ->with(['states' => function($query) use ($selectedDate) {
@@ -48,7 +45,6 @@ class WeatherDashboardController extends Controller
                     return $market;
                 });
 
-            // Calculate hours until 3PM local time for each city
             $cityTimeZone = match($city) {
                 'Austin' => 'America/Chicago',
                 'Denver' => 'America/Denver',
@@ -61,7 +57,7 @@ class WeatherDashboardController extends Controller
             };
             $nowCity = $now->copy()->setTimezone($cityTimeZone);
             $threePm = $nowCity->copy()->setTime(15, 0, 0);
-            $hoursTo3pm = $nowCity->diffInHours($threePm, false); // negative if past 3pm
+            $hoursTo3pm = $nowCity->floatDiffInHours($threePm, false); // Use float for more precision
 
             $results[] = [
                 'city' => $city,

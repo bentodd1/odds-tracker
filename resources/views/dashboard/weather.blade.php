@@ -33,15 +33,15 @@
                         @if($first)
                             <td class="p-2 font-semibold" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['city'] }}</td>
                             <td class="p-2 text-xs" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['timezone'] }}</td>
-                            <td class="p-2" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['hours_to_3pm'] }}</td>
+                            <td class="p-2" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ number_format($row['hours_to_3pm'], 1) }}</td>
                             <td class="p-2" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">
-                                {{ optional($row['accuweather']->get($selectedDate))->predicted_high ?? 'N/A' }}
+                                {{ $row['accuweather'] ? $row['accuweather']->predicted_high : 'N/A' }}
                             </td>
                             <td class="p-2" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">
-                                {{ optional($row['nws']->get($selectedDate))->predicted_high ?? 'N/A' }}
+                                {{ $row['nws'] ? $row['nws']->predicted_high : 'N/A' }}
                             </td>
                         @endif
-                        <td class="p-2">{{ $market->title }}</td>
+                        <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
                         <td class="p-2">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask * 100, 1) . '%' : 'N/A' }}
@@ -63,12 +63,12 @@
                     <tr class="border-b">
                         <td class="p-2 font-semibold">{{ $row['city'] }}</td>
                         <td class="p-2 text-xs">{{ $row['timezone'] }}</td>
-                        <td class="p-2">{{ $row['hours_to_3pm'] }}</td>
+                        <td class="p-2">{{ number_format($row['hours_to_3pm'], 1) }}</td>
                         <td class="p-2">
-                            {{ optional($row['accuweather']->get($selectedDate))->predicted_high ?? 'N/A' }}
+                            {{ $row['accuweather'] ? $row['accuweather']->predicted_high : 'N/A' }}
                         </td>
                         <td class="p-2">
-                            {{ optional($row['nws']->get($selectedDate))->predicted_high ?? 'N/A' }}
+                            {{ $row['nws'] ? $row['nws']->predicted_high : 'N/A' }}
                         </td>
                         <td class="p-2 text-gray-400" colspan="3">No Kalshi markets</td>
                     </tr>
