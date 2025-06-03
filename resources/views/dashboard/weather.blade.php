@@ -44,14 +44,14 @@
                         <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
                         <td class="p-2">
                             @if($market->filtered_state)
-                                {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask * 100, 1) . '%' : 'N/A' }}
+                                {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}
                             @else
                                 N/A
                             @endif
                         </td>
                         <td class="p-2">
                             @if($market->filtered_state)
-                                {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask * 100, 1) . '%' : 'N/A' }}
+                                {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}
                             @else
                                 N/A
                             @endif
