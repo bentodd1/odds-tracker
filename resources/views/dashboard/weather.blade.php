@@ -43,15 +43,15 @@
                         @endif
                         <td class="p-2">{{ $market->title }}</td>
                         <td class="p-2">
-                            @if($market->latestState)
-                                {{ $market->latestState->yes_ask !== null ? number_format($market->latestState->yes_ask * 100, 1) . '%' : 'N/A' }}
+                            @if($market->filtered_state)
+                                {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask * 100, 1) . '%' : 'N/A' }}
                             @else
                                 N/A
                             @endif
                         </td>
                         <td class="p-2">
-                            @if($market->latestState)
-                                {{ $market->latestState->no_ask !== null ? number_format($market->latestState->no_ask * 100, 1) . '%' : 'N/A' }}
+                            @if($market->filtered_state)
+                                {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask * 100, 1) . '%' : 'N/A' }}
                             @else
                                 N/A
                             @endif

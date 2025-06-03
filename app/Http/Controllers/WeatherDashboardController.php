@@ -39,8 +39,17 @@ class WeatherDashboardController extends Controller
                 $q->where('location', $city)
                   ->whereDate('target_date', $selectedDate);
             })
-            ->with(['latestState'])
-            ->get();
+            ->with(['states' => function($query) use ($selectedDate) {
+                $closeDate = Carbon::parse($selectedDate)->addDay()->toDateString();
+                $query->whereDate('close_time', $closeDate)
+                      ->orderByDesc('collected_at');
+            }])
+            ->get()
+            ->map(function($market) {
+                // Only keep the most recent state for the market
+                $market->filtered_state = $market->states->first();
+                return $market;
+            });
 
             // Calculate hours until 3PM local time for each city
             $cityTimeZone = match($city) {
