@@ -43,6 +43,9 @@ class FetchWeatherData extends Command
             return;
         }
 
+        $today = \Carbon\Carbon::now('America/Chicago')->toDateString();
+        $tomorrow = \Carbon\Carbon::now('America/Chicago')->addDay()->toDateString();
+
         foreach ($this->accuWeatherLocationKeys as $city => $locationKey) {
             $url = "http://dataservice.accuweather.com/forecasts/v1/daily/5day/{$locationKey}?apikey={$apiKey}&details=false&metric=false";
             $response = file_get_contents($url);
@@ -54,6 +57,10 @@ class FetchWeatherData extends Command
             $data = json_decode($response, true);
             if (isset($data['DailyForecasts'])) {
                 foreach ($data['DailyForecasts'] as $forecast) {
+                    $forecastDate = \Carbon\Carbon::parse($forecast['Date'])->toDateString();
+                    if ($forecastDate !== $today && $forecastDate !== $tomorrow) {
+                        continue; // Only save today and tomorrow
+                    }
                     $prediction = new \App\Models\AccuWeatherPrediction();
                     $prediction->city = $city;
                     $prediction->location_url = $url;

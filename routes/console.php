@@ -38,11 +38,10 @@ app(Schedule::class)->command('kalshi:fetch-weather')
                      ->hourly()
                      ->appendOutputTo(storage_path('logs/kalshi-weather.log'));
 
-// Run AccuWeather data collection daily at 1 AM Central Time
+// Run AccuWeather data collection hourly at 1 AM Central Time
 app(Schedule::class)->command('fetch:weather-data')
-                     ->timezone('America/Chicago')
-                     ->dailyAt('01:00')
-                     ->appendOutputTo(storage_path('logs/accuweather.log'));
+    ->hourly()
+    ->appendOutputTo(storage_path('logs/accuweather.log'));
 
 // Record actual weather data daily at 2 AM Central Time (after predictions are collected)
 app(Schedule::class)->command('weather:record-current')
