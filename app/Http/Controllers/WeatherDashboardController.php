@@ -62,6 +62,8 @@ class WeatherDashboardController extends Controller
                     return $market;
                 });
 
+                dd($kalshiMarkets);
+
             $cityTimeZone = match($city) {
                 'Austin' => 'America/Chicago',
                 'Denver' => 'America/Denver',
