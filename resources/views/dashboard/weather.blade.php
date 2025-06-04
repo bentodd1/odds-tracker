@@ -29,7 +29,10 @@
             @foreach($results as $row)
                 @php $first = true; @endphp
                 @foreach($row['kalshi_markets'] as $market)
-                    <tr class="border-b">
+                    @php
+                        $isBest = $row['best_bet'] && $row['best_bet']['market_id'] === $market->id;
+                    @endphp
+                    <tr class="border-b {{ $isBest ? 'bg-green-100' : '' }}">
                         @if($first)
                             <td class="p-2 font-semibold" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['city'] }}</td>
                             <td class="p-2 text-xs" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['timezone'] }}</td>
@@ -56,6 +59,11 @@
                                 N/A
                             @endif
                         </td>
+                        @if($isBest)
+                            <td class="p-2 text-green-700 font-bold" colspan="3">
+                                Best Bet: Model Prob {{ number_format($row['best_bet']['model_prob'] * 100, 1) }}%, Edge {{ number_format($row['best_bet']['edge'] * 100, 1) }}%
+                            </td>
+                        @endif
                     </tr>
                     @php $first = false; @endphp
                 @endforeach
