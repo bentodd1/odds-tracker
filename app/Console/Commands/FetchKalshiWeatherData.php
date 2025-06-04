@@ -322,8 +322,8 @@ class FetchKalshiWeatherData extends Command
 
     protected function extractLocationFromTicker(string $ticker): string
     {
-        // Example tickers: KXHIGHLAX-25MAY30, KXHIGHNY-25MAY30
-        // Extract the location code (LAX, NY) and convert to full name
+        // Example tickers: KXHIGHLAX-25MAY30, KXHIGHNY-25MAY30, KXHIGHPHIL-25MAY30
+        // Extract the location code (LAX, NY, PHIL) and convert to full name
         $locationMap = [
             'LAX' => 'Los Angeles, CA',
             'DEN' => 'Denver, CO',
@@ -334,7 +334,7 @@ class FetchKalshiWeatherData extends Command
             'PHIL' => 'Philadelphia, PA'
         ];
 
-        if (preg_match('/KXHIGH([A-Z]{2,3})/', $ticker, $matches)) {
+        if (preg_match('/KXHIGH([A-Z]{2,4})/', $ticker, $matches)) {
             $code = $matches[1];
             return $locationMap[$code] ?? $code;
         }
