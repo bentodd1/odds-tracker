@@ -30,9 +30,9 @@
             @foreach($results as $row)
                 @php
                     $first = true;
-                    // Find the max positive edge and which cell (yes/no) for this city
-                    $maxEdge = null;
-                    $maxEdgeIndex = null;
+                    // Collect all positive edges for this city
+                    $edges = [];
+                    $marketEdges = [];
                     foreach ($row['kalshi_markets'] as $i => $m) {
                         $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($m->title);
                         $type = $parsed['type'];
@@ -47,32 +47,28 @@
                         $noAsk = $m->filtered_state && $m->filtered_state->no_ask !== null ? $m->filtered_state->no_ask / 100.0 : null;
                         $yesEdge = ($yesProb !== null && $yesAsk !== null) ? $yesProb - $yesAsk : null;
                         $noEdge = ($noProb !== null && $noAsk !== null) ? $noProb - $noAsk : null;
-                        if ($yesEdge !== null && $yesEdge > 0 && ($maxEdge === null || $yesEdge > $maxEdge)) {
-                            $maxEdge = $yesEdge;
-                            $maxEdgeIndex = ['type' => 'yes', 'index' => $i];
+                        $marketEdges[$i] = ['yesEdge' => $yesEdge, 'noEdge' => $noEdge];
+                        if ($yesEdge !== null && $yesEdge > 0) {
+                            $edges[] = ['type' => 'yes', 'index' => $i, 'value' => $yesEdge];
                         }
-                        if ($noEdge !== null && $noEdge > 0 && ($maxEdge === null || $noEdge > $maxEdge)) {
-                            $maxEdge = $noEdge;
-                            $maxEdgeIndex = ['type' => 'no', 'index' => $i];
+                        if ($noEdge !== null && $noEdge > 0) {
+                            $edges[] = ['type' => 'no', 'index' => $i, 'value' => $noEdge];
+                        }
+                    }
+                    // Find the single highest positive edge
+                    $maxEdge = null;
+                    $maxEdgeIndex = null;
+                    foreach ($edges as $edge) {
+                        if ($maxEdge === null || $edge['value'] > $maxEdge) {
+                            $maxEdge = $edge['value'];
+                            $maxEdgeIndex = ['type' => $edge['type'], 'index' => $edge['index']];
                         }
                     }
                 @endphp
                 @foreach($row['kalshi_markets'] as $marketIndex => $market)
                     @php
-                        // Calculate model probability for this market
-                        $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($market->title);
-                        $type = $parsed['type'];
-                        $lowTemp = $parsed['low_temperature'];
-                        $highTemp = $parsed['high_temperature'];
-                        $accuHigh = $row['accuweather'] ? $row['accuweather']->predicted_high : null;
-                        $distribution = $row['city'] && isset($cityDistributions[$row['city']]) ? $cityDistributions[$row['city']] : [];
-                        $modelProb = ($accuHigh !== null && $distribution) ? \App\WeatherProbabilityHelper::calculateProbability($type, $lowTemp, $highTemp, $accuHigh, $distribution) : null;
-                        $yesProb = $modelProb;
-                        $noProb = $modelProb !== null ? 1 - $modelProb : null;
-                        $yesAsk = $market->filtered_state && $market->filtered_state->yes_ask !== null ? $market->filtered_state->yes_ask / 100.0 : null;
-                        $noAsk = $market->filtered_state && $market->filtered_state->no_ask !== null ? $market->filtered_state->no_ask / 100.0 : null;
-                        $yesEdge = ($yesProb !== null && $yesAsk !== null) ? $yesProb - $yesAsk : null;
-                        $noEdge = ($noProb !== null && $noAsk !== null) ? $noProb - $noAsk : null;
+                        $yesEdge = $marketEdges[$marketIndex]['yesEdge'];
+                        $noEdge = $marketEdges[$marketIndex]['noEdge'];
                         $isBestYes = $maxEdgeIndex && $maxEdgeIndex['type'] === 'yes' && $maxEdgeIndex['index'] === $marketIndex;
                         $isBestNo = $maxEdgeIndex && $maxEdgeIndex['type'] === 'no' && $maxEdgeIndex['index'] === $marketIndex;
                     @endphp
