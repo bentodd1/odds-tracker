@@ -23,6 +23,7 @@
                 <th class="p-2">Kalshi Market</th>
                 <th class="p-2">Yes %</th>
                 <th class="p-2">No %</th>
+                <th class="p-2">Model Prob</th>
             </tr>
         </thead>
         <tbody>
@@ -30,9 +31,25 @@
                 @php $first = true; @endphp
                 @foreach($row['kalshi_markets'] as $market)
                     @php
-                        $isBest = $row['best_bet'] && $row['best_bet']['market_id'] === $market->id;
+                        // Calculate model probability for this market
+                        $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($market->title);
+                        $type = $parsed['type'];
+                        $lowTemp = $parsed['low_temperature'];
+                        $highTemp = $parsed['high_temperature'];
+                        $accuHigh = $row['accuweather'] ? $row['accuweather']->predicted_high : null;
+                        $distribution = $row['city'] && isset($cityDistributions[$row['city']]) ? $cityDistributions[$row['city']] : [];
+                        $modelProb = ($accuHigh !== null && $distribution) ? \App\WeatherProbabilityHelper::calculateProbability($type, $lowTemp, $highTemp, $accuHigh, $distribution) : null;
+                        $yesProb = $modelProb;
+                        $noProb = $modelProb !== null ? 1 - $modelProb : null;
+                        $yesAsk = $market->filtered_state && $market->filtered_state->yes_ask !== null ? $market->filtered_state->yes_ask / 100.0 : null;
+                        $noAsk = $market->filtered_state && $market->filtered_state->no_ask !== null ? $market->filtered_state->no_ask / 100.0 : null;
+                        $yesEdge = ($yesProb !== null && $yesAsk !== null) ? $yesProb - $yesAsk : null;
+                        $noEdge = ($noProb !== null && $noAsk !== null) ? $noProb - $noAsk : null;
+                        // Highlight the column with the best edge (even if negative)
+                        $highlightYes = $yesEdge !== null && ($noEdge === null || $yesEdge >= $noEdge);
+                        $highlightNo = $noEdge !== null && ($yesEdge === null || $noEdge > $yesEdge);
                     @endphp
-                    <tr class="border-b {{ $isBest ? 'bg-green-100' : '' }}">
+                    <tr class="border-b">
                         @if($first)
                             <td class="p-2 font-semibold" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['city'] }}</td>
                             <td class="p-2 text-xs" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['timezone'] }}</td>
@@ -45,25 +62,27 @@
                             </td>
                         @endif
                         <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
-                        <td class="p-2">
+                        <td class="p-2 {{ $highlightYes ? 'bg-green-200 font-bold' : '' }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}
+                                @if($yesEdge !== null)
+                                    <span class="text-green-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
+                                @endif
                             @else
                                 N/A
                             @endif
                         </td>
-                        <td class="p-2">
+                        <td class="p-2 {{ $highlightNo ? 'bg-green-200 font-bold' : '' }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}
+                                @if($noEdge !== null)
+                                    <span class="text-green-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
+                                @endif
                             @else
                                 N/A
                             @endif
                         </td>
-                        @if($isBest)
-                            <td class="p-2 text-green-700 font-bold" colspan="3">
-                                Best Bet: Model Prob {{ number_format($row['best_bet']['model_prob'] * 100, 1) }}%, Edge {{ number_format($row['best_bet']['edge'] * 100, 1) }}%
-                            </td>
-                        @endif
+                        <td class="p-2">{{ $modelProb !== null ? number_format($modelProb * 100, 1) . '%' : 'N/A' }}</td>
                     </tr>
                     @php $first = false; @endphp
                 @endforeach
