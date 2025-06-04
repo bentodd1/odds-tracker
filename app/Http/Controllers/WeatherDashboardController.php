@@ -120,6 +120,7 @@ class WeatherDashboardController extends Controller
             'today' => $today,
             'tomorrow' => $tomorrow,
             'selectedDate' => $selectedDate,
+            'cityDistributions' => $cityDistributions,
         ]);
     }
 } 
