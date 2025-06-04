@@ -79,21 +79,37 @@
                             </td>
                         @endif
                         <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
-                        <td class="p-2 {{ $highlightYes ? 'bg-blue-200 font-bold' : '' }}">
+                        <td class="p-2
+                            @if($highlightYes)
+                                bg-blue-200 font-bold
+                            @elseif($yesEdge !== null && $yesEdge > 0)
+                                bg-green-200 font-bold
+                            @endif
+                        ">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}
                                 @if($highlightYes && $yesEdge !== null)
                                     <span class="text-blue-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
+                                @elseif(!$highlightYes && $yesEdge !== null && $yesEdge > 0)
+                                    <span class="text-green-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
                                 @endif
                             @else
                                 N/A
                             @endif
                         </td>
-                        <td class="p-2 {{ $highlightNo ? 'bg-blue-200 font-bold' : '' }}">
+                        <td class="p-2
+                            @if($highlightNo)
+                                bg-blue-200 font-bold
+                            @elseif($noEdge !== null && $noEdge > 0)
+                                bg-green-200 font-bold
+                            @endif
+                        ">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}
                                 @if($highlightNo && $noEdge !== null)
                                     <span class="text-blue-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
+                                @elseif(!$highlightNo && $noEdge !== null && $noEdge > 0)
+                                    <span class="text-green-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
                                 @endif
                             @else
                                 N/A
