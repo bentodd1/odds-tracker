@@ -22,8 +22,6 @@ class WeatherDashboardController extends Controller
         $targetDates = [$today, $tomorrow];
         $selectedDate = $request->input('date', $today);
 
-        dd($selectedDate);
-
         // Load error distributions for all cities (reuse logic from AccuWeatherAnalysisController)
         $cityDistributions = [];
         $predictions = AccuWeatherPrediction::whereNotNull('actual_high')
