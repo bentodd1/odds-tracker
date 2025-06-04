@@ -28,13 +28,11 @@
         </thead>
         <tbody>
             @foreach($results as $row)
-                @php
-                    $first = true;
-                    // Collect all positive edges for this city
-                    $edges = [];
-                    $marketEdges = [];
-                    foreach ($row['kalshi_markets'] as $i => $m) {
-                        $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($m->title);
+                @php $first = true; @endphp
+                @foreach($row['kalshi_markets'] as $market)
+                    @php
+                        // Calculate model probability for this market
+                        $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($market->title);
                         $type = $parsed['type'];
                         $lowTemp = $parsed['low_temperature'];
                         $highTemp = $parsed['high_temperature'];
@@ -43,34 +41,13 @@
                         $modelProb = ($accuHigh !== null && $distribution) ? \App\WeatherProbabilityHelper::calculateProbability($type, $lowTemp, $highTemp, $accuHigh, $distribution) : null;
                         $yesProb = $modelProb;
                         $noProb = $modelProb !== null ? 1 - $modelProb : null;
-                        $yesAsk = $m->filtered_state && $m->filtered_state->yes_ask !== null ? $m->filtered_state->yes_ask / 100.0 : null;
-                        $noAsk = $m->filtered_state && $m->filtered_state->no_ask !== null ? $m->filtered_state->no_ask / 100.0 : null;
+                        $yesAsk = $market->filtered_state && $market->filtered_state->yes_ask !== null ? $market->filtered_state->yes_ask / 100.0 : null;
+                        $noAsk = $market->filtered_state && $market->filtered_state->no_ask !== null ? $market->filtered_state->no_ask / 100.0 : null;
                         $yesEdge = ($yesProb !== null && $yesAsk !== null) ? $yesProb - $yesAsk : null;
                         $noEdge = ($noProb !== null && $noAsk !== null) ? $noProb - $noAsk : null;
-                        $marketEdges[$i] = ['yesEdge' => $yesEdge, 'noEdge' => $noEdge];
-                        if ($yesEdge !== null && $yesEdge > 0) {
-                            $edges[] = ['type' => 'yes', 'index' => $i, 'value' => $yesEdge];
-                        }
-                        if ($noEdge !== null && $noEdge > 0) {
-                            $edges[] = ['type' => 'no', 'index' => $i, 'value' => $noEdge];
-                        }
-                    }
-                    // Find the single highest positive edge
-                    $maxEdge = null;
-                    $maxEdgeIndex = null;
-                    foreach ($edges as $edge) {
-                        if ($maxEdge === null || $edge['value'] > $maxEdge) {
-                            $maxEdge = $edge['value'];
-                            $maxEdgeIndex = ['type' => $edge['type'], 'index' => $edge['index']];
-                        }
-                    }
-                @endphp
-                @foreach($row['kalshi_markets'] as $marketIndex => $market)
-                    @php
-                        $yesEdge = $marketEdges[$marketIndex]['yesEdge'];
-                        $noEdge = $marketEdges[$marketIndex]['noEdge'];
-                        $isBestYes = $maxEdgeIndex && $maxEdgeIndex['type'] === 'yes' && $maxEdgeIndex['index'] === $marketIndex;
-                        $isBestNo = $maxEdgeIndex && $maxEdgeIndex['type'] === 'no' && $maxEdgeIndex['index'] === $marketIndex;
+                        // Highlight the column with the best edge (even if negative)
+                        $highlightYes = $yesEdge !== null && ($noEdge === null || $yesEdge >= $noEdge);
+                        $highlightNo = $noEdge !== null && ($yesEdge === null || $noEdge > $yesEdge);
                     @endphp
                     <tr class="border-b">
                         @if($first)
@@ -85,36 +62,20 @@
                             </td>
                         @endif
                         <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
-                        <td class="p-2
-                            @if($isBestYes)
-                                bg-blue-200 font-bold
-                            @elseif($yesEdge !== null && $yesEdge > 0)
-                                bg-green-200 font-bold
-                            @endif
-                        ">
+                        <td class="p-2 {{ $highlightYes ? 'bg-green-200 font-bold' : '' }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}
-                                @if($isBestYes && $yesEdge !== null)
-                                    <span class="text-blue-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
-                                @elseif(!$isBestYes && $yesEdge !== null && $yesEdge > 0)
+                                @if($yesEdge !== null)
                                     <span class="text-green-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
                                 @endif
                             @else
                                 N/A
                             @endif
                         </td>
-                        <td class="p-2
-                            @if($isBestNo)
-                                bg-blue-200 font-bold
-                            @elseif($noEdge !== null && $noEdge > 0)
-                                bg-green-200 font-bold
-                            @endif
-                        ">
+                        <td class="p-2 {{ $highlightNo ? 'bg-green-200 font-bold' : '' }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}
-                                @if($isBestNo && $noEdge !== null)
-                                    <span class="text-blue-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
-                                @elseif(!$isBestNo && $noEdge !== null && $noEdge > 0)
+                                @if($noEdge !== null)
                                     <span class="text-green-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
                                 @endif
                             @else
