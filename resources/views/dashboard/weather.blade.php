@@ -28,7 +28,23 @@
         </thead>
         <tbody>
             @foreach($results as $row)
-                @php $first = true; @endphp
+                @php
+                    $first = true;
+                    // Find the max model probability for this city
+                    $maxModelProb = null;
+                    foreach ($row['kalshi_markets'] as $m) {
+                        $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($m->title);
+                        $type = $parsed['type'];
+                        $lowTemp = $parsed['low_temperature'];
+                        $highTemp = $parsed['high_temperature'];
+                        $accuHigh = $row['accuweather'] ? $row['accuweather']->predicted_high : null;
+                        $distribution = $row['city'] && isset($cityDistributions[$row['city']]) ? $cityDistributions[$row['city']] : [];
+                        $prob = ($accuHigh !== null && $distribution) ? \App\WeatherProbabilityHelper::calculateProbability($type, $lowTemp, $highTemp, $accuHigh, $distribution) : null;
+                        if ($prob !== null && ($maxModelProb === null || $prob > $maxModelProb)) {
+                            $maxModelProb = $prob;
+                        }
+                    }
+                @endphp
                 @foreach($row['kalshi_markets'] as $market)
                     @php
                         // Calculate model probability for this market
@@ -48,8 +64,9 @@
                         // Highlight the column with the best edge (even if negative)
                         $highlightYes = $yesEdge !== null && ($noEdge === null || $yesEdge >= $noEdge);
                         $highlightNo = $noEdge !== null && ($yesEdge === null || $noEdge > $yesEdge);
+                        $isMaxProb = $modelProb !== null && $modelProb == $maxModelProb;
                     @endphp
-                    <tr class="border-b">
+                    <tr class="border-b {{ $isMaxProb ? 'bg-blue-100' : '' }}">
                         @if($first)
                             <td class="p-2 font-semibold" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['city'] }}</td>
                             <td class="p-2 text-xs" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['timezone'] }}</td>
