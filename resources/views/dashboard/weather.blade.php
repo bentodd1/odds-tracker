@@ -66,7 +66,7 @@
                         $highlightNo = $noEdge !== null && ($yesEdge === null || $noEdge > $yesEdge);
                         $isMaxProb = $modelProb !== null && $modelProb == $maxModelProb;
                     @endphp
-                    <tr class="border-b {{ $isMaxProb ? 'bg-blue-100' : '' }}">
+                    <tr class="border-b">
                         @if($first)
                             <td class="p-2 font-semibold" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['city'] }}</td>
                             <td class="p-2 text-xs" rowspan="{{ max(1, $row['kalshi_markets']->count()) }}">{{ $row['timezone'] }}</td>
@@ -79,21 +79,21 @@
                             </td>
                         @endif
                         <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
-                        <td class="p-2 {{ $highlightYes ? 'bg-green-200 font-bold' : '' }}">
+                        <td class="p-2 {{ $highlightYes ? 'bg-blue-200 font-bold' : '' }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}
-                                @if($yesEdge !== null)
-                                    <span class="text-green-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
+                                @if($highlightYes && $yesEdge !== null)
+                                    <span class="text-blue-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
                                 @endif
                             @else
                                 N/A
                             @endif
                         </td>
-                        <td class="p-2 {{ $highlightNo ? 'bg-green-200 font-bold' : '' }}">
+                        <td class="p-2 {{ $highlightNo ? 'bg-blue-200 font-bold' : '' }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}
-                                @if($noEdge !== null)
-                                    <span class="text-green-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
+                                @if($highlightNo && $noEdge !== null)
+                                    <span class="text-blue-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
                                 @endif
                             @else
                                 N/A
