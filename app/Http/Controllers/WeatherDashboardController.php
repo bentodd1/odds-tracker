@@ -22,6 +22,8 @@ class WeatherDashboardController extends Controller
         $targetDates = [$today, $tomorrow];
         $selectedDate = $request->input('date', $today);
 
+        dd($selectedDate);
+
         // Load error distributions for all cities (reuse logic from AccuWeatherAnalysisController)
         $cityDistributions = [];
         $predictions = AccuWeatherPrediction::whereNotNull('actual_high')
@@ -61,8 +63,6 @@ class WeatherDashboardController extends Controller
                     $market->filtered_state = $market->states->first();
                     return $market;
                 });
-
-                dd($kalshiMarkets);
 
             $cityTimeZone = match($city) {
                 'Austin' => 'America/Chicago',
@@ -125,4 +125,4 @@ class WeatherDashboardController extends Controller
             'cityDistributions' => $cityDistributions,
         ]);
     }
-} 
+}
