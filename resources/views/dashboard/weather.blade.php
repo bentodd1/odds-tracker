@@ -28,10 +28,40 @@
         </thead>
         <tbody>
             @foreach($results as $row)
+                @php
+                    // Find the best deal (highest edge) for this city
+                    $cityBestEdge = null;
+                    $cityBestMarketId = null;
+                    $cityBestIsYes = null;
+                    foreach ($row['kalshi_markets'] as $m) {
+                        $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($m->title);
+                        $type = $parsed['type'];
+                        $lowTemp = $parsed['low_temperature'];
+                        $highTemp = $parsed['high_temperature'];
+                        $accuHigh = $row['accuweather'] ? $row['accuweather']->predicted_high : null;
+                        $distribution = $row['city'] && isset($cityDistributions[$row['city']]) ? $cityDistributions[$row['city']] : [];
+                        $modelProb = ($accuHigh !== null && $distribution) ? \App\WeatherProbabilityHelper::calculateProbability($type, $lowTemp, $highTemp, $accuHigh, $distribution) : null;
+                        $yesProb = $modelProb;
+                        $noProb = $modelProb !== null ? 1 - $modelProb : null;
+                        $yesAsk = $m->filtered_state && $m->filtered_state->yes_ask !== null ? $m->filtered_state->yes_ask / 100.0 : null;
+                        $noAsk = $m->filtered_state && $m->filtered_state->no_ask !== null ? $m->filtered_state->no_ask / 100.0 : null;
+                        $yesEdge = ($yesProb !== null && $yesAsk !== null) ? $yesProb - $yesAsk : null;
+                        $noEdge = ($noProb !== null && $noAsk !== null) ? $noProb - $noAsk : null;
+                        if ($yesEdge !== null && ($cityBestEdge === null || $yesEdge > $cityBestEdge)) {
+                            $cityBestEdge = $yesEdge;
+                            $cityBestMarketId = $m->id;
+                            $cityBestIsYes = true;
+                        }
+                        if ($noEdge !== null && ($cityBestEdge === null || $noEdge > $cityBestEdge)) {
+                            $cityBestEdge = $noEdge;
+                            $cityBestMarketId = $m->id;
+                            $cityBestIsYes = false;
+                        }
+                    }
+                @endphp
                 @php $first = true; @endphp
                 @foreach($row['kalshi_markets'] as $market)
                     @php
-                        // Calculate model probability for this market
                         $parsed = \App\WeatherProbabilityHelper::extractTemperaturesFromTitle($market->title);
                         $type = $parsed['type'];
                         $lowTemp = $parsed['low_temperature'];
@@ -45,9 +75,10 @@
                         $noAsk = $market->filtered_state && $market->filtered_state->no_ask !== null ? $market->filtered_state->no_ask / 100.0 : null;
                         $yesEdge = ($yesProb !== null && $yesAsk !== null) ? $yesProb - $yesAsk : null;
                         $noEdge = ($noProb !== null && $noAsk !== null) ? $noProb - $noAsk : null;
-                        // Highlight the column with the best edge (even if negative)
                         $highlightYes = $yesEdge !== null && ($noEdge === null || $yesEdge >= $noEdge);
                         $highlightNo = $noEdge !== null && ($yesEdge === null || $noEdge > $yesEdge);
+                        $isCityBestYes = $market->id === $cityBestMarketId && $cityBestIsYes;
+                        $isCityBestNo = $market->id === $cityBestMarketId && !$cityBestIsYes;
                     @endphp
                     <tr class="border-b">
                         @if($first)
@@ -62,7 +93,7 @@
                             </td>
                         @endif
                         <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
-                        <td class="p-2 {{ $highlightYes ? 'bg-green-200 font-bold' : '' }}">
+                        <td class="p-2 {{ $isCityBestYes ? 'bg-blue-200 font-bold' : ($highlightYes ? 'bg-green-200 font-bold' : '') }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}
                                 @if($yesEdge !== null)
@@ -72,7 +103,7 @@
                                 N/A
                             @endif
                         </td>
-                        <td class="p-2 {{ $highlightNo ? 'bg-green-200 font-bold' : '' }}">
+                        <td class="p-2 {{ $isCityBestNo ? 'bg-blue-200 font-bold' : ($highlightNo ? 'bg-green-200 font-bold' : '') }}">
                             @if($market->filtered_state)
                                 {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}
                                 @if($noEdge !== null)
