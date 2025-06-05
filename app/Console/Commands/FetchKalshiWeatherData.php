@@ -310,35 +310,31 @@ class FetchKalshiWeatherData extends Command
             $day = substr($dateStr, 0, 2);
             $month = substr($dateStr, 2, 3);
             $year = '20' . substr($dateStr, 5, 2);
-            
             // Convert month abbreviation to number
             $monthNum = date('m', strtotime("1 {$month} 2000"));
-            
-            return Carbon::createFromDate($year, $monthNum, $day);
+            // Always return a Carbon date in Y-m-d format
+            return Carbon::createFromDate($year, $monthNum, $day)->startOfDay();
         }
-        
         throw new \InvalidArgumentException("Invalid ticker format: {$ticker}");
     }
 
     protected function extractLocationFromTicker(string $ticker): string
     {
         // Example tickers: KXHIGHLAX-25MAY30, KXHIGHNY-25MAY30, KXHIGHPHIL-25MAY30
-        // Extract the location code (LAX, NY, PHIL) and convert to full name
+        // Extract the location code (LAX, NY, PHIL) and convert to city name only
         $locationMap = [
-            'LAX' => 'Los Angeles, CA',
-            'DEN' => 'Denver, CO',
-            'NY' => 'New York, NY',
-            'CHI' => 'Chicago, IL',
-            'AUS' => 'Austin, TX',
-            'MIA' => 'Miami, FL',
-            'PHIL' => 'Philadelphia, PA'
+            'LAX' => 'Los Angeles',
+            'DEN' => 'Denver',
+            'NY' => 'New York',
+            'CHI' => 'Chicago',
+            'AUS' => 'Austin',
+            'MIA' => 'Miami',
+            'PHIL' => 'Philadelphia'
         ];
-
         if (preg_match('/KXHIGH([A-Z]{2,4})/', $ticker, $matches)) {
             $code = $matches[1];
             return $locationMap[$code] ?? $code;
         }
-        
         throw new \InvalidArgumentException("Invalid ticker format: {$ticker}");
     }
 } 

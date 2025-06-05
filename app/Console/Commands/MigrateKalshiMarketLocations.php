@@ -49,23 +49,17 @@ class MigrateKalshiMarketLocations extends Command
         }
         $this->info("Backfilled $backfilled markets with target_date.");
 
-        $markets = KalshiWeatherMarket::where(function($q) {
-            $q->whereNull('location')->orWhereNull('category_id');
-        })->get();
+        $markets = KalshiWeatherMarket::all();
 
         foreach ($markets as $market) {
             foreach ($cityAliases as $canonical => $aliases) {
                 foreach ($aliases as $alias) {
                     if (stripos($market->title, $alias) !== false) {
                         $market->location = $canonical;
-
-                        // Match category by slug
-                        $slug = $cityToSlug[$canonical];
-                        $category = KalshiWeatherCategory::where('slug', $slug)->first();
-                        if ($category) {
-                            $market->category_id = $category->id;
+                        // Ensure target_date is Y-m-d
+                        if ($market->target_date && strlen($market->target_date) > 10) {
+                            $market->target_date = \Carbon\Carbon::parse($market->target_date)->toDateString();
                         }
-
                         $market->save();
                         $updated++;
                         break 2; // Stop after first match
@@ -74,6 +68,6 @@ class MigrateKalshiMarketLocations extends Command
             }
         }
 
-        $this->info("Updated $updated markets with location and category_id.");
+        $this->info("Updated $updated markets with location and target_date.");
     }
 } 
