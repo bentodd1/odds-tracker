@@ -141,11 +141,17 @@ class FetchKalshiWeatherData extends Command
             $strikeInfo = $this->extractStrikeInfo($marketData);
 
             // Extract temperatures from the title
-            $tempInfo = $this->extractTemperaturesFromTitle($marketData['title']);  // Changed from ticker to title
+            $tempInfo = $this->extractTemperaturesFromTitle($marketData['title']);
             
             if ($this->debug) {
                 $this->info("Extracted temperatures: " . json_encode($tempInfo));
             }
+
+            // Ensure location is standardized
+            $location = KalshiWeatherMarket::standardizeLocation($event->location);
+            
+            // Ensure target_date is properly formatted
+            $targetDate = Carbon::parse($event->target_date)->format('Y-m-d');
 
             // Create or update the market definition
             $market = KalshiWeatherMarket::firstOrCreate(
@@ -168,8 +174,8 @@ class FetchKalshiWeatherData extends Command
                     'high_temperature' => $tempInfo['high_temperature'],
                     'rules_primary' => $marketData['rules_primary'] ?? null,
                     'rules_secondary' => $marketData['rules_secondary'] ?? null,
-                    'location' => $event->location,
-                    'target_date' => $event->target_date,
+                    'location' => $location,
+                    'target_date' => $targetDate,
                     'category_id' => $event->category_id,
                 ]
             );
