@@ -150,8 +150,8 @@ class FetchKalshiWeatherData extends Command
             // Ensure location is standardized
             $location = KalshiWeatherMarket::standardizeLocation($event->location);
             
-            // Ensure target_date is properly formatted
-            $targetDate = Carbon::parse($event->target_date)->format('Y-m-d');
+            // Use the event's target_date directly - it's already a Carbon instance
+            $targetDate = $event->target_date->format('Y-m-d');
 
             // Create or update the market definition
             $market = KalshiWeatherMarket::firstOrCreate(
@@ -310,12 +310,13 @@ class FetchKalshiWeatherData extends Command
     {
         // Example ticker: KXHIGHLAX-25MAY30
         // Extract the date part (25MAY30) and convert to Carbon
+        // Format is YEAR-MONTH-DAY (25MAY30 = 2025-05-30)
         if (preg_match('/-(\d{2}[A-Z]{3}\d{2})$/', $ticker, $matches)) {
             $dateStr = $matches[1];
-            // Convert to format Carbon can understand: 25MAY30 -> 2025-05-30
-            $day = substr($dateStr, 0, 2);
-            $month = substr($dateStr, 2, 3);
-            $year = '20' . substr($dateStr, 5, 2);
+            // Convert to format Carbon can understand
+            $year = '20' . substr($dateStr, 0, 2);  // Get "25" and make it "2025"
+            $month = substr($dateStr, 2, 3);        // Get "MAY"
+            $day = substr($dateStr, 5, 2);          // Get "30"
             // Convert month abbreviation to number
             $monthNum = date('m', strtotime("1 {$month} 2000"));
             // Always return a Carbon date in Y-m-d format

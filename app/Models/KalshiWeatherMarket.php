@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class KalshiWeatherMarket extends Model
 {
@@ -72,9 +73,32 @@ class KalshiWeatherMarket extends Model
                 $market->location = static::standardizeLocation($market->location);
             }
             
-            // Ensure target_date is properly formatted
+            // Ensure target_date is properly formatted and has the correct year
             if ($market->isDirty('target_date') && $market->target_date) {
-                $market->target_date = Carbon::parse($market->target_date)->format('Y-m-d');
+                try {
+                    // Log the original value for debugging
+                    Log::info('Original target_date value: ' . $market->target_date);
+                    
+                    // Parse the date
+                    $date = Carbon::parse($market->target_date);
+                    
+                    // Force the year to be 2025
+                    $date->year(2025);
+                    
+                    // Log the parsed date for debugging
+                    Log::info('Parsed date with corrected year: ' . $date->format('Y-m-d'));
+                    
+                    // Format back to Y-m-d
+                    $market->target_date = $date->format('Y-m-d');
+                    
+                    // Log the final value for debugging
+                    Log::info('Final target_date value: ' . $market->target_date);
+                } catch (\Exception $e) {
+                    Log::error('Error parsing target_date: ' . $e->getMessage(), [
+                        'original_value' => $market->target_date,
+                        'exception' => $e
+                    ]);
+                }
             }
         });
     }
