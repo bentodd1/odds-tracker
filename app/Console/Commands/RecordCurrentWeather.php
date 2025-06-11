@@ -140,29 +140,20 @@ class RecordCurrentWeather extends Command
                     }
                 }
 
-                // Update predictions if we have any
-                if (!$predictions->isEmpty()) {
-                    foreach ($predictions as $prediction) {
-                        // Update high if needed
-                        if ($currentHigh !== null && (!isset($prediction->actual_high) || $currentHigh > $prediction->actual_high)) {
-                            $prediction->actual_high = $currentHigh;
-                        }
-
-                        // Update low if needed
-                        if ($currentLow !== null && (!isset($prediction->actual_low) || $currentLow < $prediction->actual_low)) {
-                            $prediction->actual_low = $currentLow;
-                        }
-
-                        // If we have predicted values, calculate differences
-                        if (isset($prediction->predicted_high) && $currentHigh !== null) {
-                            $prediction->high_difference = $prediction->predicted_high - $prediction->actual_high;
-                        }
-                        if (isset($prediction->predicted_low) && $currentLow !== null) {
-                            $prediction->low_difference = $prediction->predicted_low - $prediction->actual_low;
-                        }
-
-                        $prediction->save();
+                // Update NWS predictions for this city and date
+                $nwsPredictions = \App\Models\NwsWeatherPrediction::where('city', $city)
+                    ->whereDate('target_date', $targetDateStr)
+                    ->get();
+                foreach ($nwsPredictions as $nwsPrediction) {
+                    if ($currentHigh !== null) {
+                        $nwsPrediction->actual_high = $currentHigh;
+                        $nwsPrediction->high_difference = $nwsPrediction->predicted_high - $currentHigh;
                     }
+                    if ($currentLow !== null) {
+                        $nwsPrediction->actual_low = $currentLow;
+                        $nwsPrediction->low_difference = $nwsPrediction->predicted_low - $currentLow;
+                    }
+                    $nwsPrediction->save();
                 }
                 
                 $this->info("Recorded weather data for {$city}: High {$currentHigh}°F, Low {$currentLow}°F");
