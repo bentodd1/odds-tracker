@@ -36,6 +36,10 @@
                        class="{{ $currentPage === 'accuweather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
                         Weather Analysis
                     </a>
+                    <a href="{{ route('nws.analysis') }}"
+                       class="{{ $currentPage === 'nws-analysis' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
+                        NWS Weather Analysis
+                    </a>
                     <a href="{{ route('dashboard.weather') }}"
                        class="{{ $currentPage === 'weather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
                         Weather Dashboard
