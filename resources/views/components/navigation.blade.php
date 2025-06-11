@@ -40,6 +40,10 @@
                        class="{{ $currentPage === 'weather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
                         Weather Dashboard
                     </a>
+                    <a href="{{ route('dashboard.nws-weather') }}"
+                       class="{{ $currentPage === 'nws-weather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
+                        NWS Weather Dashboard
+                    </a>
                 </div>
 
                 <div class="flex items-center space-x-4 ml-4">
