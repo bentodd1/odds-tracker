@@ -11,6 +11,7 @@ class AccuWeatherAnalysisController extends Controller
     {
         $selectedCity = $request->input('city', 'all');
         $selectedMonth = $request->input('month', 'all');
+        $selectedHour = $request->input('hour', 1);
         
         $query = AccuWeatherPrediction::whereNotNull('actual_high')
             ->whereRaw('prediction_date = DATE_SUB(target_date, INTERVAL 1 DAY)');
@@ -21,6 +22,10 @@ class AccuWeatherAnalysisController extends Controller
         
         if ($selectedMonth !== 'all') {
             $query->whereMonth('target_date', $selectedMonth);
+        }
+        
+        if ($selectedHour !== 'all') {
+            $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
         }
         
         $predictions = $query->get();
@@ -106,7 +111,8 @@ class AccuWeatherAnalysisController extends Controller
             'overallStats',
             'cities',
             'selectedCity',
-            'selectedMonth'
+            'selectedMonth',
+            'selectedHour'
         ));
     }
 } 

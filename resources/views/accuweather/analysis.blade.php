@@ -30,6 +30,17 @@
                 </select>
             </div>
             
+            <div>
+                <label for="hour" class="block text-sm font-medium text-gray-700">Prediction Hour</label>
+                <select name="hour" id="hour" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    @for($i = 0; $i < 24; $i++)
+                        <option value="{{ $i }}" {{ (isset($selectedHour) ? $selectedHour : 1) == $i ? 'selected' : '' }}>
+                            {{ sprintf('%02d:00', $i) }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+            
             <div class="self-end">
                 <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Apply Filters</button>
             </div>
