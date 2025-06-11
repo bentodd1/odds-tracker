@@ -106,13 +106,18 @@ class AccuWeatherAnalysisController extends Controller
                 ->values()
         ];
         
+        $cityLabels = array_keys($cityStats);
+        $medianData = array_map(function($s) { return $s['median']; }, $cityStats);
+        
         return view('accuweather.analysis', compact(
             'cityStats',
             'overallStats',
             'cities',
             'selectedCity',
             'selectedMonth',
-            'selectedHour'
+            'selectedHour',
+            'cityLabels',
+            'medianData'
         ));
     }
 } 

@@ -47,6 +47,57 @@
         </form>
     </div>
     
+    <!-- Median Chart -->
+    <div class="my-8">
+        <canvas id="medianDiffChart" height="100"></canvas>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('medianDiffChart').getContext('2d');
+            const cityLabels = @json($cityLabels ?? []);
+            const medianData = @json($medianData ?? []);
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: cityLabels,
+                    datasets: [{
+                        label: 'Median High Temp Difference (°F)',
+                        data: medianData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Median High Temperature Differences by City'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Median Difference (°F)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'City'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+    
     <!-- Median Table -->
     <h2 class="text-xl font-semibold mt-6 mb-2">Median High Temperature Differences by City</h2>
     <div class="overflow-x-auto">
