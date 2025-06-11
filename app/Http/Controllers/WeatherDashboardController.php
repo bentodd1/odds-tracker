@@ -21,11 +21,15 @@ class WeatherDashboardController extends Controller
         $tomorrow = $now->copy()->setTimezone('America/Chicago')->addDay()->toDateString();
         $targetDates = [$today, $tomorrow];
         $selectedDate = $request->input('date', $today);
+        $selectedHour = $request->input('hour', 1);
 
         // Load error distributions for all cities (reuse logic from AccuWeatherAnalysisController)
         $cityDistributions = [];
         $predictions = AccuWeatherPrediction::whereNotNull('actual_high')
             ->whereRaw('prediction_date = DATE_SUB(target_date, INTERVAL 1 DAY)')
+            ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
+                $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
+            })
             ->get();
         foreach ($cities as $city) {
             $cityDiffs = $predictions->where('city', $city)->map(function($p) { return -$p->high_difference; });
@@ -41,11 +45,17 @@ class WeatherDashboardController extends Controller
         foreach ($cities as $city) {
             $accuweather = AccuWeatherPrediction::where('city', $city)
                 ->where('target_date', $selectedDate)
+                ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
+                    $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
+                })
                 ->orderBy('prediction_time', 'desc')
                 ->first();
 
             $nws = NwsWeatherPrediction::where('city', $city)
                 ->where('target_date', $selectedDate)
+                ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
+                    $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
+                })
                 ->orderBy('prediction_time', 'desc')
                 ->first();
 
@@ -121,6 +131,7 @@ class WeatherDashboardController extends Controller
             'tomorrow' => $tomorrow,
             'selectedDate' => $selectedDate,
             'cityDistributions' => $cityDistributions,
+            'selectedHour' => $selectedHour,
         ]);
     }
 }

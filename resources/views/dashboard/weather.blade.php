@@ -5,12 +5,22 @@
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold mb-6">Weather Dashboard</h1>
-    <form method="GET" class="mb-4">
-        <label for="date" class="mr-2 font-semibold">Select Date:</label>
-        <select name="date" id="date" onchange="this.form.submit()" class="border rounded px-2 py-1">
-            <option value="{{ $today }}" {{ request('date', $today) == $today ? 'selected' : '' }}>Today ({{ $today }})</option>
-            <option value="{{ $tomorrow }}" {{ request('date', $today) == $tomorrow ? 'selected' : '' }}>Tomorrow ({{ $tomorrow }})</option>
-        </select>
+    <form method="GET" class="mb-4 flex gap-4 items-center">
+        <div>
+            <label for="date" class="mr-2 font-semibold">Select Date:</label>
+            <select name="date" id="date" onchange="this.form.submit()" class="border rounded px-2 py-1">
+                <option value="{{ $today }}" {{ request('date', $today) == $today ? 'selected' : '' }}>Today ({{ $today }})</option>
+                <option value="{{ $tomorrow }}" {{ request('date', $today) == $tomorrow ? 'selected' : '' }}>Tomorrow ({{ $tomorrow }})</option>
+            </select>
+        </div>
+        <div>
+            <label for="hour" class="mr-2 font-semibold">Select Hour:</label>
+            <select name="hour" id="hour" onchange="this.form.submit()" class="border rounded px-2 py-1">
+                @for($i = 0; $i < 24; $i++)
+                    <option value="{{ $i }}" {{ request('hour', 1) == $i ? 'selected' : '' }}>{{ sprintf('%02d:00', $i) }}</option>
+                @endfor
+            </select>
+        </div>
     </form>
     <table class="min-w-full bg-white rounded shadow overflow-x-auto">
         <thead>
