@@ -102,22 +102,38 @@
                                 {{ $row['nws'] ? $row['nws']->predicted_high : 'N/A' }}
                             </td>
                         @endif
-                        <td class="p-2 max-w-xs whitespace-normal break-words">{{ $market->title }}</td>
-                        <td class="p-2 {{ $isCityBestYes ? 'bg-blue-200 font-bold' : ($highlightYes ? 'bg-green-200 font-bold' : '') }}">
+                        <td class="p-2 max-w-xs whitespace-normal break-words text-center">
+                            @php
+                                $displayRange = '';
+                                if ($type === 'above') {
+                                    $displayRange = '&gt;' . $highTemp . '°';
+                                } elseif ($type === 'below') {
+                                    $displayRange = '&lt;' . $lowTemp . '°';
+                                } elseif ($type === 'between') {
+                                    $displayRange = $lowTemp . '-' . $highTemp . '°';
+                                }
+                            @endphp
+                            {!! $displayRange !!}
+                        </td>
+                        <td class="p-2 text-center">
                             @if($market->filtered_state)
-                                {{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}
+                                <div class="font-bold">{{ $market->filtered_state->yes_ask !== null ? number_format($market->filtered_state->yes_ask, 1) . '%' : 'N/A' }}</div>
                                 @if($yesEdge !== null)
-                                    <span class="text-green-700"> (Edge {{ number_format($yesEdge * 100, 1) }}%)</span>
+                                    <div class="text-sm {{ $yesEdge >= 0 ? 'text-green-700' : 'text-red-600' }}">
+                                        Edge {{ $yesEdge >= 0 ? '+' : '' }}{{ number_format($yesEdge * 100, 1) }}%
+                                    </div>
                                 @endif
                             @else
                                 N/A
                             @endif
                         </td>
-                        <td class="p-2 {{ $isCityBestNo ? 'bg-blue-200 font-bold' : ($highlightNo ? 'bg-green-200 font-bold' : '') }}">
+                        <td class="p-2 text-center">
                             @if($market->filtered_state)
-                                {{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}
+                                <div class="font-bold">{{ $market->filtered_state->no_ask !== null ? number_format($market->filtered_state->no_ask, 1) . '%' : 'N/A' }}</div>
                                 @if($noEdge !== null)
-                                    <span class="text-green-700"> (Edge {{ number_format($noEdge * 100, 1) }}%)</span>
+                                    <div class="text-sm {{ $noEdge >= 0 ? 'text-green-700' : 'text-red-600' }}">
+                                        Edge {{ $noEdge >= 0 ? '+' : '' }}{{ number_format($noEdge * 100, 1) }}%
+                                    </div>
                                 @endif
                             @else
                                 N/A
