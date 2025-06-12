@@ -103,7 +103,7 @@
                                 if ($type === 'above') {
                                     $displayRange = '&gt;' . $highTemp . '°';
                                 } elseif ($type === 'below') {
-                                    $displayRange = '&lt;' . $lowTemp . '°';
+                                    $displayRange = '&lt;' . $highTemp . '°';
                                 } elseif ($type === 'between') {
                                     $displayRange = $lowTemp . '-' . $highTemp . '°';
                                 }
