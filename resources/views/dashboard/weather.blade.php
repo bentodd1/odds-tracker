@@ -105,12 +105,14 @@
                         <td class="p-2 max-w-xs whitespace-normal break-words text-center">
                             @php
                                 $displayRange = '';
-                                if ($type === 'above' && $highTemp !== null) {
-                                    $displayRange = '&gt;' . $highTemp . '°';
-                                } elseif ($type === 'below' && $highTemp !== null) {
-                                    $displayRange = '&lt;' . $highTemp . '°';
-                                } elseif ($type === 'between' && $lowTemp !== null && $highTemp !== null) {
-                                    $displayRange = $lowTemp . '-' . $highTemp . '°';
+                                if (($type === 'above' || $type === 'below' || $type === 'between') && ($highTemp !== null || $lowTemp !== null)) {
+                                    if ($type === 'above' && $highTemp !== null) {
+                                        $displayRange = '&gt;' . $highTemp . '°';
+                                    } elseif ($type === 'below' && $highTemp !== null) {
+                                        $displayRange = '&lt;' . $highTemp . '°';
+                                    } elseif ($type === 'between' && $lowTemp !== null && $highTemp !== null) {
+                                        $displayRange = $lowTemp . '-' . $highTemp . '°';
+                                    }
                                 } else {
                                     // Fallback: show the raw title if parsing fails
                                     $displayRange = e($market->title);
