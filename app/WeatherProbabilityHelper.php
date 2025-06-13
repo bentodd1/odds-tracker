@@ -48,7 +48,7 @@ class WeatherProbabilityHelper
 
     /**
      * Calculate the model probability for a market using the city's error distribution.
-     * @param string $type 'less', 'greater', or 'between'
+     * @param string $type 'below', 'above', or 'between'
      * @param int|null $lowTemp
      * @param int|null $highTemp
      * @param int $accuPrediction
@@ -58,14 +58,14 @@ class WeatherProbabilityHelper
     public static function calculateProbability(string $type, ?int $lowTemp, ?int $highTemp, int $accuPrediction, array $distribution): float
     {
         $prob = 0.0;
-        if ($type === 'less' && $highTemp !== null) {
+        if ($type === 'below' && $highTemp !== null) {
             $diff = $highTemp - $accuPrediction;
             foreach ($distribution as $item) {
                 if ($item['difference'] <= $diff) {
                     $prob += $item['percentage'];
                 }
             }
-        } elseif ($type === 'greater' && $highTemp !== null) {
+        } elseif ($type === 'above' && $highTemp !== null) {
             $diff = $highTemp - $accuPrediction;
             foreach ($distribution as $item) {
                 if ($item['difference'] >= $diff) {
