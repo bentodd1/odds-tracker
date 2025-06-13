@@ -14,16 +14,29 @@ class WeatherProbabilityHelper
         $highTemp = null;
         $type = null;
 
-        if (preg_match('/high temp.*?(?:be\s*)?(?:<|less than)\s*(\d+)/i', $title, $matches)) {
-            $type = 'less';
+        // Match ">90°" (above)
+        if (preg_match('/be\s*>\s*(\d+)°/i', $title, $m)) {
+            $type = 'above';
+            $highTemp = (int)$m[1];
+        }
+        // Match "<83°" (below)
+        elseif (preg_match('/be\s*<\s*(\d+)°/i', $title, $m)) {
+            $type = 'below';
+            $highTemp = (int)$m[1];
+        }
+        // Match "89-90°" (between)
+        elseif (preg_match('/be\s*(\d+)-(\d+)°/i', $title, $m)) {
+            $type = 'between';
+            $lowTemp = (int)$m[1];
+            $highTemp = (int)$m[2];
+        }
+        // Also support "less than" and "greater than" for legacy
+        elseif (preg_match('/high temp.*?(?:be\s*)?(?:<|less than)\s*(\d+)/i', $title, $matches)) {
+            $type = 'below';
             $highTemp = (int)$matches[1];
         } elseif (preg_match('/high temp.*?(?:be\s*)?(?:>|greater than)\s*(\d+)/i', $title, $matches)) {
-            $type = 'greater';
+            $type = 'above';
             $highTemp = (int)$matches[1];
-        } elseif (preg_match('/high temp.*?be\s*(\d+)-(\d+)/i', $title, $matches)) {
-            $type = 'between';
-            $lowTemp = (int)$matches[1];
-            $highTemp = (int)$matches[2];
         }
 
         return [
