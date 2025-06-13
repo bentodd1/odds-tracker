@@ -54,4 +54,5 @@ Route::middleware([TrackVisitor::class])->group(function () {
     // Weather Dashboard route
     Route::get('/dashboard/weather', [\App\Http\Controllers\WeatherDashboardController::class, 'index'])->name('dashboard.weather');
     Route::get('/dashboard/nws-weather', [\App\Http\Controllers\WeatherDashboardController::class, 'nwsIndex'])->name('dashboard.nws-weather');
+    Route::get('/dashboard/combined-weather', [\App\Http\Controllers\WeatherDashboardController::class, 'combinedIndex'])->name('dashboard.combined-weather');
 });

@@ -250,4 +250,121 @@ class WeatherDashboardController extends Controller
             'selectedHour' => $selectedHour,
         ]);
     }
+
+    public function combinedIndex(Request $request)
+    {
+        $cities = [
+            'Austin', 'Denver', 'Chicago', 'Los Angeles', 'New York', 'Philadelphia', 'Miami'
+        ];
+        $results = [];
+        $now = Carbon::now();
+        $today = $now->copy()->setTimezone('America/Chicago')->toDateString();
+        $tomorrow = $now->copy()->setTimezone('America/Chicago')->addDay()->toDateString();
+        $selectedDate = $request->input('date', $today);
+        $selectedHour = $request->input('hour', 1);
+
+        // AccuWeather distributions
+        $cityDistributionsAccu = [];
+        $accuPredictions = AccuWeatherPrediction::whereNotNull('actual_high')
+            ->whereRaw('prediction_date = DATE_SUB(target_date, INTERVAL 1 DAY)')
+            ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
+                $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
+            })
+            ->get();
+        foreach ($cities as $city) {
+            $cityDiffs = $accuPredictions->where('city', $city)->map(function($p) { return -$p->high_difference; });
+            $distribution = collect($cityDiffs)->countBy()->map(function($count, $diff) use ($cityDiffs) {
+                return [
+                    'difference' => (int)$diff,
+                    'percentage' => round(($count / max(1, count($cityDiffs))) * 100, 1)
+                ];
+            })->sortBy('difference')->values()->all();
+            $cityDistributionsAccu[$city] = $distribution;
+        }
+
+        // NWS distributions
+        $cityDistributionsNws = [];
+        $nwsPredictions = NwsWeatherPrediction::whereNotNull('actual_high')
+            ->whereRaw('prediction_date = DATE_SUB(target_date, INTERVAL 1 DAY)')
+            ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
+                $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
+            })
+            ->get();
+        foreach ($cities as $city) {
+            $cityDiffs = $nwsPredictions->where('city', $city)->map(function($p) { return -$p->high_difference; });
+            $distribution = collect($cityDiffs)->countBy()->map(function($count, $diff) use ($cityDiffs) {
+                return [
+                    'difference' => (int)$diff,
+                    'percentage' => round(($count / max(1, count($cityDiffs))) * 100, 1)
+                ];
+            })->sortBy('difference')->values()->all();
+            $cityDistributionsNws[$city] = $distribution;
+        }
+
+        foreach ($cities as $city) {
+            $accuweather = AccuWeatherPrediction::where('city', $city)
+                ->where('target_date', $selectedDate)
+                ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
+                    $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
+                })
+                ->orderBy('prediction_time', 'desc')
+                ->first();
+
+            $nws = NwsWeatherPrediction::where('city', $city)
+                ->where('target_date', $selectedDate)
+                ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
+                    $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
+                })
+                ->orderBy('prediction_time', 'desc')
+                ->first();
+
+            $kalshiMarkets = \App\Models\KalshiWeatherMarket::where('location', $city)
+                ->whereDate('target_date', $selectedDate)
+                ->with(['states' => function($query) use ($selectedDate) {
+                    $closeDate = Carbon::parse($selectedDate)->addDay()->toDateString();
+                    $query->whereDate('close_time', $closeDate)
+                          ->orderByDesc('collected_at');
+                }])
+                ->get()
+                ->map(function($market) {
+                    $market->filtered_state = $market->states->first();
+                    return $market;
+                });
+
+            foreach ($kalshiMarkets as $market) {
+                $parsed = WeatherProbabilityHelper::extractTemperaturesFromTitle($market->title);
+                $type = $parsed['type'];
+                $lowTemp = $parsed['low_temperature'];
+                $highTemp = $parsed['high_temperature'];
+
+                // AccuWeather model
+                $accuHigh = $accuweather ? $accuweather->predicted_high : null;
+                $accuDist = $cityDistributionsAccu[$city] ?? [];
+                $accuProb = ($accuHigh !== null && $accuDist) ? WeatherProbabilityHelper::calculateProbability($type, $lowTemp, $highTemp, $accuHigh, $accuDist) : null;
+
+                // NWS model
+                $nwsHigh = $nws ? $nws->predicted_high : null;
+                $nwsDist = $cityDistributionsNws[$city] ?? [];
+                $nwsProb = ($nwsHigh !== null && $nwsDist) ? WeatherProbabilityHelper::calculateProbability($type, $lowTemp, $highTemp, $nwsHigh, $nwsDist) : null;
+
+                $market->accu_model_prob = $accuProb;
+                $market->nws_model_prob = $nwsProb;
+            }
+
+            $results[] = [
+                'city' => $city,
+                'accuweather' => $accuweather,
+                'nws' => $nws,
+                'kalshi_markets' => $kalshiMarkets,
+            ];
+        }
+
+        return view('dashboard.combined-weather', [
+            'results' => $results,
+            'today' => $today,
+            'tomorrow' => $tomorrow,
+            'selectedDate' => $selectedDate,
+            'selectedHour' => $selectedHour,
+        ]);
+    }
 }
