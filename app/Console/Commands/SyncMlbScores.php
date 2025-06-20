@@ -78,7 +78,10 @@ class SyncMlbScores extends Command
                 if ($game) {
                     // Update or create the Score record
                     Score::updateOrCreate(
-                        ['game_id' => $game->id],
+                        [
+                            'game_id' => $game->id,
+                            'period' => 'F'
+                        ],
                         [
                             'home_score' => $homeScore,
                             'away_score' => $awayScore,
@@ -91,23 +94,6 @@ class SyncMlbScores extends Command
 
                     if ($debug) {
                         $this->info("Updated: {$awayTeamName} at {$homeTeamName} ({$awayScore}-{$homeScore})");
-                    }
-
-                    if ($homeOutcome && $awayOutcome) {
-                        MoneyLine::create([
-                            'game_id' => $game->id,
-                            'casino_id' => $casino->id,
-                            'home_odds' => $homeOutcome['price'],
-                            'away_odds' => $awayOutcome['price'],
-                            'recorded_at' => $timestamp,
-                        ]);
-                        if ($this->debug) {
-                            $this->info("Saved money line for game {$game->id} at casino {$casino->name} ({$homeOutcome['price']}/{$awayOutcome['price']})");
-                        }
-                    } else {
-                        if ($this->debug) {
-                            $this->warn("No valid money line outcome for game {$game->id} at casino {$casino->name}");
-                        }
                     }
                 } else {
                     $this->warn("No local game match for: {$awayTeamName} at {$homeTeamName} on {$gameDate}");
