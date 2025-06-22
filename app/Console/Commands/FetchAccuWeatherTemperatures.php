@@ -75,6 +75,18 @@ class FetchAccuWeatherTemperatures extends Command
                     ]
                 );
 
+                // Update AccuWeather predictions for this location and date
+                $accuPredictions = \App\Models\AccuWeatherPrediction::where('city', $event->location)
+                    ->whereDate('target_date', $event->target_date)
+                    ->get();
+                foreach ($accuPredictions as $accuPrediction) {
+                    $accuPrediction->actual_high = $forecast['high_temperature'];
+                    $accuPrediction->actual_low = $forecast['low_temperature'];
+                    $accuPrediction->high_difference = $accuPrediction->predicted_high - $forecast['high_temperature'];
+                    $accuPrediction->low_difference = $accuPrediction->predicted_low - $forecast['low_temperature'];
+                    $accuPrediction->save();
+                }
+
                 $temperaturesStored++;
 
                 if ($this->debug) {

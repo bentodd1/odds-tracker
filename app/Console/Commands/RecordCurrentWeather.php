@@ -155,6 +155,22 @@ class RecordCurrentWeather extends Command
                     }
                     $nwsPrediction->save();
                 }
+
+                // Update AccuWeather predictions for this city and date
+                $accuPredictions = AccuWeatherPrediction::where('city', $city)
+                    ->whereDate('target_date', $targetDateStr)
+                    ->get();
+                foreach ($accuPredictions as $accuPrediction) {
+                    if ($currentHigh !== null) {
+                        $accuPrediction->actual_high = $currentHigh;
+                        $accuPrediction->high_difference = $accuPrediction->predicted_high - $currentHigh;
+                    }
+                    if ($currentLow !== null) {
+                        $accuPrediction->actual_low = $currentLow;
+                        $accuPrediction->low_difference = $accuPrediction->predicted_low - $currentLow;
+                    }
+                    $accuPrediction->save();
+                }
                 
                 $this->info("Recorded weather data for {$city}: High {$currentHigh}°F, Low {$currentLow}°F");
             } else {

@@ -20,7 +20,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
         PostHog::init(
             config('services.posthog.key'),
             ['host' => config('services.posthog.host')]
