@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\AccuWeatherPrediction;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class BackfillWeatherPredictions extends Command
@@ -64,4 +63,4 @@ class BackfillWeatherPredictions extends Command
         $this->info("Updated {$updatedCount} predictions");
         $this->info("Skipped {$skippedCount} predictions (no updates needed)");
     }
-} 
+}
