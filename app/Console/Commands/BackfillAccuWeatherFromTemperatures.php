@@ -13,8 +13,8 @@ class BackfillAccuWeatherFromTemperatures extends Command
 
     public function handle()
     {
-        // Get all weather temperature records
-        $temperatures = WeatherTemperature::where('source', 'accuweather')->get();
+        // Get all weather temperature records (any source)
+        $temperatures = WeatherTemperature::all();
         
         $this->info("Found {$temperatures->count()} weather temperature records");
         
@@ -38,7 +38,7 @@ class BackfillAccuWeatherFromTemperatures extends Command
                 continue;
             }
 
-            $this->info("Found {$predictionsToUpdate->count()} predictions to update for {$temperature->location} on {$temperature->date}");
+            $this->info("Found {$predictionsToUpdate->count()} predictions to update for {$temperature->location} on {$temperature->date} (source: {$temperature->source})");
 
             foreach ($predictionsToUpdate as $prediction) {
                 // Copy the actual weather data
