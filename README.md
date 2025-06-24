@@ -141,3 +141,6 @@ This project is built with:
 - The Odds API for historical odds data
 
 API rate limits and data availability may vary by sport and time period. Please refer to The Odds API documentation for detailed information about data availability for each sport.
+
+
+New Lines
