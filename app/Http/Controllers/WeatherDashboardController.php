@@ -7,6 +7,7 @@ use App\Models\NwsWeatherPrediction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\WeatherProbabilityHelper;
+use Illuminate\Support\Facades\Log;
 
 class WeatherDashboardController extends Controller
 {
@@ -262,6 +263,7 @@ class WeatherDashboardController extends Controller
         $tomorrow = $now->copy()->setTimezone('America/Chicago')->addDay()->toDateString();
         $selectedDate = $request->input('date', $today);
         $selectedHour = $request->input('hour', 1);
+        $isToday = $selectedDate === $today;
 
         // AccuWeather distributions
         $cityDistributionsAccu = [];
@@ -304,6 +306,9 @@ class WeatherDashboardController extends Controller
         foreach ($cities as $city) {
             $accuweather = AccuWeatherPrediction::where('city', $city)
                 ->where('target_date', $selectedDate)
+                ->when($isToday, function($query) use ($today) {
+                    $query->whereDate('prediction_date', $today);
+                })
                 ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
                     $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
                 })
@@ -312,6 +317,9 @@ class WeatherDashboardController extends Controller
 
             $nws = NwsWeatherPrediction::where('city', $city)
                 ->where('target_date', $selectedDate)
+                ->when($isToday, function($query) use ($today) {
+                    $query->whereDate('prediction_date', $today);
+                })
                 ->when($selectedHour !== 'all', function($query) use ($selectedHour) {
                     $query->whereRaw('HOUR(prediction_time) = ?', [$selectedHour]);
                 })
