@@ -30,7 +30,7 @@ return new class extends Migration
             $table->index('forecast_hour');
             
             // Add unique constraint to prevent duplicate entries for the same city, target date, and forecast hour
-            $table->unique(['city', 'target_date', 'forecast_hour']);
+            // $table->unique(['city', 'target_date', 'forecast_hour']);
         });
     }
 
