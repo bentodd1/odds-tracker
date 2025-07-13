@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalshi Weather Forecast Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        select, button, input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .download-btn {
+            background-color: #28a745;
+        }
+        .download-btn:hover {
+            background-color: #1e7e34;
+        }
+        .reset-btn {
+            background-color: #6c757d;
+        }
+        .reset-btn:hover {
+            background-color: #545b62;
+        }
+        #chartContainer {
+            margin: 30px 0;
+            height: 400px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .bar {
+            height: 100%;
+            background-color: #000;
+            transition: width 0.3s ease;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Kalshi Weather Forecast Analysis</h1>
+
+    <div class="control-group">
+        <label for="fileInput">Upload your CSV file:</label>
+        <input type="file" id="fileInput" accept=".csv" />
+    </div>
+
+    <div id="status"></div>
+
+    <div class="controls" id="filterControls" style="display: none;">
+        <div class="control-group">
+            <label for="citySelect">City:</label>
+            <select id="citySelect">
+                <option value="all">All Cities</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="timingSelect">Timing:</label>
+            <select id="timingSelect">
+                <option value="all">Both Timings</option>
+                <option value="day_before_6pm">Day Before 6PM</option>
+                <option value="day_of_6am">Day of 6AM</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="seasonSelect">Season:</label>
+            <select id="seasonSelect">
+                <option value="all">All Seasons</option>
+                <option value="Summer">Summer</option>
+                <option value="Fall">Fall</option>
+                <option value="Winter">Winter</option>
+                <option value="Spring">Spring</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <button id="resetBtn" class="reset-btn">Reset Filters</button>
+        </div>
+
+        <div class="control-group">
+            <button id="downloadBtn" class="download-btn">Download Cleaned CSV</button>
+        </div>
+    </div>
+
+    <h2 id="chartTitle"></h2>
+
+    <div id="chartContainer">
+        <canvas id="distributionChart"></canvas>
+    </div>
+
+    <div id="tableContainer"></div>
+</div>
+
+<script>
+    let rawData = [];
+    let filteredData = [];
+    let chart = null;
+    let cleanedCSVData = '';
+
+    // File upload handler
+    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+    document.getElementById('citySelect').addEventListener('change', updateChart);
+    document.getElementById('timingSelect').addEventListener('change', updateChart);
+    document.getElementById('seasonSelect').addEventListener('change', updateChart);
+    document.getElementById('resetBtn').addEventListener('click', resetFilters);
+    document.getElementById('downloadBtn').addEventListener('click', downloadCleanedCSV);
+
+    function showStatus(message, type = 'success') {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        showStatus('Processing file...', 'success');
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const csvText = e.target.result;
+            processCSVData(csvText);
+        };
+        reader.readAsText(file);
+    }
+
+    function processCSVData(csvText) {
+        const lines = csvText.split('\n');
+        const header = lines[0];
+        const headerFields = header.split(',').map(field => field.trim());
+
+        // Filter and process data
+        const processedData = [];
+        const cleanedLines = [header];
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            if (line.includes('day_before_6pm') || line.includes('day_of_6am')) {
+                cleanedLines.push(line);
+
+                const values = line.split(',');
+                const row = {};
+
+                headerFields.forEach((field, index) => {
+                    row[field] = values[index] ? values[index].trim() : '';
+                });
+
+                // Parse numeric fields
+                row.forecast_error = parseFloat(row.forecast_error) || 0;
+                row.forecast_error_rounded = Math.round(row.forecast_error);
+
+                processedData.push(row);
+            }
+        }
+
+        rawData = processedData;
+        cleanedCSVData = cleanedLines.join('\n');
+
+        // Populate city dropdown
+        const cities = [...new Set(processedData.map(row => row.city))].sort();
+        const citySelect = document.getElementById('citySelect');
+        citySelect.innerHTML = '<option value="all">All Cities</option>';
+        cities.forEach(city => {
+            const option = document.createElement('option');
+            option.value = city;
+            option.textContent = city.charAt(0).toUpperCase() + city.slice(1);
+            citySelect.appendChild(option);
+        });
+
+        showStatus(`✅ Data loaded: ${processedData.length} records (day_before_6pm + day_of_6am only)`, 'success');
+        document.getElementById('filterControls').style.display = 'grid';
+
+        updateChart();
+    }
+
+    function getFilteredData() {
+        let filtered = rawData;
+
+        const city = document.getElementById('citySelect').value;
+        const timing = document.getElementById('timingSelect').value;
+        const season = document.getElementById('seasonSelect').value;
+
+        if (city !== 'all') {
+            filtered = filtered.filter(row => row.city === city);
+        }
+
+        if (timing !== 'all') {
+            filtered = filtered.filter(row => row.timing_type === timing);
+        }
+
+        if (season !== 'all') {
+            filtered = filtered.filter(row => row.season === season);
+        }
+
+        return filtered;
+    }
+
+    function updateChart() {
+        const filtered = getFilteredData();
+
+        // Create distribution data
+        const errorCounts = {};
+        filtered.forEach(row => {
+            const error = row.forecast_error_rounded;
+            errorCounts[error] = (errorCounts[error] || 0) + 1;
+        });
+
+        const chartData = Object.entries(errorCounts)
+            .map(([error, count]) => ({
+                difference: parseInt(error),
+                count: count,
+                percentage: ((count / filtered.length) * 100).toFixed(1)
+            }))
+            .sort((a, b) => a.difference - b.difference);
+
+        // Update title
+        const city = document.getElementById('citySelect').value;
+        const timing = document.getElementById('timingSelect').value;
+        const season = document.getElementById('seasonSelect').value;
+
+        const cityText = city === 'all' ? 'All Cities' : city.charAt(0).toUpperCase() + city.slice(1);
+        const seasonText = season === 'all' ? 'All Seasons' : season;
+        const timingText = timing === 'all' ? 'Both Timings' :
+            timing === 'day_before_6pm' ? 'Day Before 6PM' : 'Day of 6AM';
+
+        document.getElementById('chartTitle').textContent =
+            `${cityText} ${seasonText} - ${timingText} (${filtered.length} predictions)`;
+
+        // Update chart
+        updateBarChart(chartData);
+        updateTable(chartData);
+    }
+
+    function updateBarChart(data) {
+        const ctx = document.getElementById('distributionChart').getContext('2d');
+
+        if (chart) {
+            chart.destroy();
+        }
+
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.difference > 0 ? `+${d.difference}` : d.difference.toString()),
+                datasets: [{
+                    label: 'Count',
+                    data: data.map(d => d.count),
+                    backgroundColor: '#2563eb',
+                    borderColor: '#1d4ed8',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Difference (°F)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Count'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function updateTable(data) {
+        const maxCount = Math.max(...data.map(d => d.count));
+
+        let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Difference (°F)</th>
+                            <th>Count</th>
+                            <th>Percentage</th>
+                            <th>Distribution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+        data.forEach((row, index) => {
+            const barWidth = Math.max(2, (row.count / maxCount) * 100);
+            const rowClass = index % 2 === 0 ? '' : 'style="background-color: #f8f9fa;"';
+
+            tableHTML += `
+                    <tr ${rowClass}>
+                        <td>${row.difference > 0 ? `+${row.difference}` : row.difference}</td>
+                        <td>${row.count}</td>
+                        <td>${row.percentage}%</td>
+                        <td>
+                            <div class="bar-container">
+                                <div class="bar" style="width: ${barWidth}%;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+        });
+
+        tableHTML += '</tbody></table>';
+        document.getElementById('tableContainer').innerHTML = tableHTML;
+    }
+
+    function resetFilters() {
+        document.getElementById('citySelect').value = 'all';
+        document.getElementById('timingSelect').value = 'all';
+        document.getElementById('seasonSelect').value = 'all';
+        updateChart();
+    }
+
+    function downloadCleanedCSV() {
+        if (!cleanedCSVData) {
+            alert('Please upload and process a CSV file first.');
+            return;
+        }
+
+        const blob = new Blob([cleanedCSVData], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.href = url;
+        link.download = 'kalshi_timing_cleaned.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showStatus('✅ CSV download completed!', 'success');
+    }
+</script>
+</body>
+</html>
