@@ -50,6 +50,7 @@ Route::middleware([TrackVisitor::class])->group(function () {
     
     // NWS analysis route
     Route::get('/nws/analysis', [NwsWeatherAnalysisController::class, 'index'])->name('nws.analysis');
+    Route::get('/nws/analysis/{city}/{difference}', [NwsWeatherAnalysisController::class, 'showExamples'])->name('nws.analysis.examples');
 
     // Weather Dashboard route
     Route::get('/dashboard/weather', [\App\Http\Controllers\WeatherDashboardController::class, 'index'])->name('dashboard.weather');

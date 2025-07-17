@@ -143,7 +143,7 @@
                     </thead>
                     <tbody>
                         @foreach($stats['distribution'] as $diff => $count)
-                            <tr>
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location.href='{{ route('nws.analysis.examples', ['city' => $city, 'difference' => $diff]) }}'">
                                 <td class="p-2 border text-center">{{ $diff }}</td>
                                 <td class="p-2 border text-center">{{ $count }}</td>
                                 <td class="p-2 border text-center">{{ round(($count / $stats['count']) * 100, 1) }}%</td>
@@ -172,7 +172,7 @@
             </thead>
             <tbody>
                 @foreach($overallStats['distribution'] as $item)
-                    <tr>
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location.href='{{ route('nws.analysis.examples', ['city' => 'all', 'difference' => $item['difference']]) }}'">
                         <td class="p-2 border text-center">{{ $item['difference'] }}</td>
                         <td class="p-2 border text-center">{{ $item['count'] }}</td>
                         <td class="p-2 border text-center">{{ $item['percentage'] }}%</td>

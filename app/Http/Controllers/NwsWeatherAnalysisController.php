@@ -122,4 +122,24 @@ class NwsWeatherAnalysisController extends Controller
         }
         return $distribution;
     }
+
+    public function showExamples(Request $request, $city, $difference)
+    {
+        // Convert the difference back to the original format (flip the sign)
+        $originalDifference = -$difference;
+        
+        $query = NwsWeatherPrediction::whereNotNull('actual_high')
+            ->whereRaw('prediction_date = DATE_SUB(target_date, INTERVAL 1 DAY)')
+            ->where('high_difference', $originalDifference)
+            ->orderBy('target_date', 'desc');
+        
+        // If city is not 'all', filter by specific city
+        if ($city !== 'all') {
+            $query->where('city', $city);
+        }
+        
+        $examples = $query->get();
+        
+        return view('nws.examples', compact('city', 'difference', 'examples'));
+    }
 } 
