@@ -139,4 +139,92 @@ class KalshiApiService
         
         return $category ? $category->id : null;
     }
+
+    /**
+     * Fetch markets for a specific date range using series_ticker
+     *
+     * @param string $seriesTicker
+     * @param string $settleDateMin
+     * @param string $settleDateMax
+     * @return array
+     */
+    public function getMarketsByDate(string $seriesTicker, string $settleDateMin, string $settleDateMax): array
+    {
+        try {
+            $response = Http::get("{$this->baseUrl}/markets", [
+                'series_ticker' => $seriesTicker,
+                'settle_date_min' => $settleDateMin,
+                'settle_date_max' => $settleDateMax,
+            ]);
+            
+            if ($response->successful()) {
+                return $response->json() ?? [];
+            }
+            
+            Log::error('Kalshi API error - getMarketsByDate', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'series_ticker' => $seriesTicker,
+                'settle_date_min' => $settleDateMin,
+                'settle_date_max' => $settleDateMax
+            ]);
+            
+            return [];
+        } catch (\Exception $e) {
+            Log::error('Kalshi API exception - getMarketsByDate', [
+                'message' => $e->getMessage(),
+                'series_ticker' => $seriesTicker,
+                'settle_date_min' => $settleDateMin,
+                'settle_date_max' => $settleDateMax
+            ]);
+            
+            return [];
+        }
+    }
+
+    /**
+     * Fetch candlestick data for a specific market
+     *
+     * @param string $seriesTicker
+     * @param string $marketTicker
+     * @param int $startTs
+     * @param int $endTs
+     * @param int $periodInterval
+     * @return array
+     */
+    public function getCandlesticks(string $seriesTicker, string $marketTicker, int $startTs, int $endTs, int $periodInterval = 60): array
+    {
+        try {
+            $response = Http::get("{$this->baseUrl}/series/{$seriesTicker}/markets/{$marketTicker}/candlesticks", [
+                'start_ts' => $startTs,
+                'end_ts' => $endTs,
+                'period_interval' => $periodInterval,
+            ]);
+            
+            if ($response->successful()) {
+                return $response->json() ?? [];
+            }
+            
+            Log::error('Kalshi API error - getCandlesticks', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'series_ticker' => $seriesTicker,
+                'market_ticker' => $marketTicker,
+                'start_ts' => $startTs,
+                'end_ts' => $endTs
+            ]);
+            
+            return [];
+        } catch (\Exception $e) {
+            Log::error('Kalshi API exception - getCandlesticks', [
+                'message' => $e->getMessage(),
+                'series_ticker' => $seriesTicker,
+                'market_ticker' => $marketTicker,
+                'start_ts' => $startTs,
+                'end_ts' => $endTs
+            ]);
+            
+            return [];
+        }
+    }
 } 

@@ -1,0 +1,127 @@
+SELECT
+    kwm.title AS market_title,
+    kwm.location AS city,
+    kwm.target_date,
+    kwm.strike_type,
+    kwm.low_temperature AS market_low_temp,
+    kwm.high_temperature AS market_high_temp,
+    kwm.single_strike AS market_single_strike,
+    kwms.yes_ask,
+    kwms.no_ask,
+    kwms.collected_at AS state_collected_at,
+    wt.high_temperature AS actual_high_temperature,
+    wt.low_temperature AS actual_low_temperature,
+    CASE
+        WHEN kwm.strike_type = 'less' THEN
+            CASE WHEN wt.high_temperature < kwm.single_strike THEN 'YES' ELSE 'NO' END
+        WHEN kwm.strike_type = 'between' THEN
+            CASE WHEN wt.high_temperature >= kwm.low_temperature AND wt.high_temperature <= kwm.high_temperature THEN 'YES' ELSE 'NO' END
+        WHEN kwm.strike_type = 'greater' THEN
+            CASE WHEN wt.high_temperature > kwm.single_strike THEN 'YES' ELSE 'NO' END
+        ELSE 'UNKNOWN'
+        END AS market_result
+FROM kalshi_weather_markets kwm
+         LEFT JOIN kalshi_weather_market_states kwms ON kwm.id = kwms.market_id
+         LEFT JOIN weather_temperatures wt ON kwm.weather_temperature_id = wt.id
+WHERE
+    kwm.target_date IS NOT NULL
+  AND kwms.collected_at IS NOT NULL
+  AND kwms.collected_at >= DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 21 HOUR
+  AND kwms.collected_at < DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 22 HOUR
+  AND wt.high_temperature IS NOT NULL
+  AND kwms.yes_ask = (
+      SELECT MAX(kwms2.yes_ask)
+      FROM kalshi_weather_market_states kwms2
+      WHERE kwms2.market_id = kwm.id
+      AND kwms2.collected_at >= DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 21 HOUR
+      AND kwms2.collected_at < DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 22 HOUR
+  )
+ORDER BY kwm.target_date DESC, kwm.location, kwm.title, kwms.collected_at;
+
+SELECT
+    kwm.title AS market_title,
+    kwm.location AS city,
+    kwm.target_date,
+    kwm.strike_type,
+    kwm.low_temperature AS market_low_temp,
+    kwm.high_temperature AS market_high_temp,
+    kwm.single_strike AS market_single_strike,
+    kwms.yes_ask,
+    kwms.no_ask,
+    kwms.collected_at AS state_collected_at,
+    wt.high_temperature AS actual_high_temperature,
+    wt.low_temperature AS actual_low_temperature,
+    CASE
+        WHEN kwm.strike_type = 'less' THEN
+            CASE WHEN wt.high_temperature < kwm.single_strike THEN 'YES' ELSE 'NO' END
+        WHEN kwm.strike_type = 'between' THEN
+            CASE WHEN wt.high_temperature >= kwm.low_temperature AND wt.high_temperature <= kwm.high_temperature THEN 'YES' ELSE 'NO' END
+        WHEN kwm.strike_type = 'greater' THEN
+            CASE WHEN wt.high_temperature > kwm.single_strike THEN 'YES' ELSE 'NO' END
+        ELSE 'UNKNOWN'
+        END AS market_result
+FROM kalshi_weather_markets kwm
+         LEFT JOIN kalshi_weather_market_states kwms ON kwm.id = kwms.market_id
+         LEFT JOIN weather_temperatures wt ON kwm.weather_temperature_id = wt.id
+WHERE
+    kwm.target_date IS NOT NULL
+  AND kwms.collected_at IS NOT NULL
+  AND kwms.collected_at >= DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 21 HOUR
+  AND kwms.collected_at < DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 22 HOUR
+  AND wt.high_temperature IS NOT NULL
+  AND kwm.id = (
+    SELECT kwm2.id
+    FROM kalshi_weather_markets kwm2
+             LEFT JOIN kalshi_weather_market_states kwms2 ON kwm2.id = kwms2.market_id
+    WHERE kwm2.location = kwm.location
+      AND kwm2.target_date = kwm.target_date
+      AND kwms2.collected_at >= DATE_SUB(kwm2.target_date, INTERVAL 1 DAY) + INTERVAL 21 HOUR
+      AND kwms2.collected_at < DATE_SUB(kwm2.target_date, INTERVAL 1 DAY) + INTERVAL 22 HOUR
+    ORDER BY kwms2.yes_ask DESC
+    LIMIT 1
+)
+ORDER BY kwm.target_date DESC, kwm.location, kwm.title, kwms.collected_at;
+
+SELECT
+    kwm.title AS market_title,
+    kwm.location AS city,
+    kwm.target_date,
+    kwm.strike_type,
+    kwm.low_temperature AS market_low_temp,
+    kwm.high_temperature AS market_high_temp,
+    kwm.single_strike AS market_single_strike,
+    kwms.yes_ask,
+    kwms.no_ask,
+    kwms.collected_at AS state_collected_at,
+    wt.high_temperature AS actual_high_temperature,
+    wt.low_temperature AS actual_low_temperature,
+    CASE
+        WHEN kwm.strike_type = 'less' THEN
+            CASE WHEN wt.high_temperature < kwm.single_strike THEN 'YES' ELSE 'NO' END
+        WHEN kwm.strike_type = 'between' THEN
+            CASE WHEN wt.high_temperature >= kwm.low_temperature AND wt.high_temperature <= kwm.high_temperature THEN 'YES' ELSE 'NO' END
+        WHEN kwm.strike_type = 'greater' THEN
+            CASE WHEN wt.high_temperature > kwm.single_strike THEN 'YES' ELSE 'NO' END
+        ELSE 'UNKNOWN'
+        END AS market_result
+FROM kalshi_weather_markets kwm
+         LEFT JOIN kalshi_weather_market_states kwms ON kwm.id = kwms.market_id
+         LEFT JOIN weather_temperatures wt ON kwm.weather_temperature_id = wt.id
+WHERE
+    kwm.target_date IS NOT NULL
+  AND kwms.collected_at IS NOT NULL
+  AND kwms.collected_at >= DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 21 HOUR
+  AND kwms.collected_at < DATE_SUB(kwm.target_date, INTERVAL 1 DAY) + INTERVAL 22 HOUR
+  AND wt.high_temperature IS NOT NULL
+  AND kwm.id = (
+      SELECT kwm2.id
+      FROM kalshi_weather_markets kwm2
+      LEFT JOIN kalshi_weather_market_states kwms2 ON kwm2.id = kwms2.market_id
+      WHERE kwm2.location = kwm.location
+      AND kwm2.target_date = kwm.target_date
+      AND kwms2.collected_at >= DATE_SUB(kwm2.target_date, INTERVAL 1 DAY) + INTERVAL 21 HOUR
+      AND kwms2.collected_at < DATE_SUB(kwm2.target_date, INTERVAL 1 DAY) + INTERVAL 22 HOUR
+      ORDER BY kwms2.yes_ask DESC
+      LIMIT 1
+  )
+ORDER BY kwm.target_date DESC, kwm.location, kwm.title, kwms.collected_at;
