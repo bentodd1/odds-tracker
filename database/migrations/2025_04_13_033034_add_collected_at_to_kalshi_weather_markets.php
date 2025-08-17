@@ -11,9 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('kalshi_weather_markets', function (Blueprint $table) {
-            $table->timestamp('collected_at')->after('last_updated_at');
-        });
+        if (Schema::hasTable('kalshi_weather_markets')) {
+            Schema::table('kalshi_weather_markets', function (Blueprint $table) {
+                if (!Schema::hasColumn('kalshi_weather_markets', 'collected_at')) {
+                    $table->timestamp('collected_at')->after('last_updated_at');
+                }
+            });
+        }
     }
 
     /**
@@ -21,8 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('kalshi_weather_markets', function (Blueprint $table) {
-            $table->dropColumn('collected_at');
-        });
+        if (Schema::hasTable('kalshi_weather_markets') && Schema::hasColumn('kalshi_weather_markets', 'collected_at')) {
+            Schema::table('kalshi_weather_markets', function (Blueprint $table) {
+                $table->dropColumn('collected_at');
+            });
+        }
     }
 }; 

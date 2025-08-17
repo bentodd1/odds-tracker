@@ -8,9 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('nws_weather_predictions', function (Blueprint $table) {
-            $table->dropUnique('nws_weather_predictions_city_target_date_forecast_hour_unique');
-        });
+        if (Schema::hasTable('nws_weather_predictions')) {
+            try {
+                Schema::table('nws_weather_predictions', function (Blueprint $table) {
+                    $table->dropUnique('nws_weather_predictions_city_target_date_forecast_hour_unique');
+                });
+            } catch (\Exception $e) {
+                // Index doesn't exist, which is fine
+            }
+        }
     }
 
     public function down(): void

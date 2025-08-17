@@ -8,15 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('kalshi_weather_markets', function (Blueprint $table) {
-            $table->string('location')->nullable()->after('title');
-        });
+        if (Schema::hasTable('kalshi_weather_markets')) {
+            Schema::table('kalshi_weather_markets', function (Blueprint $table) {
+                if (!Schema::hasColumn('kalshi_weather_markets', 'location')) {
+                    $table->string('location')->nullable()->after('title');
+                }
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('kalshi_weather_markets', function (Blueprint $table) {
-            $table->dropColumn('location');
-        });
+        if (Schema::hasTable('kalshi_weather_markets') && Schema::hasColumn('kalshi_weather_markets', 'location')) {
+            Schema::table('kalshi_weather_markets', function (Blueprint $table) {
+                $table->dropColumn('location');
+            });
+        }
     }
 }; 
