@@ -56,6 +56,22 @@ class Spread extends Model
             default => throw new \InvalidArgumentException("Unsupported sport: {$sportIdentifier}")
         };
 
+        // Get moneyline for the same casino to determine baseline win probabilities
+        $moneyLine = $this->game->moneyLines()
+            ->where('casino_id', $this->casino_id)
+            ->latest('recorded_at')
+            ->first();
+
+        // Calculate baseline win probabilities (subtract 2% for vig)
+        if ($moneyLine) {
+            $homeWinProbability = $moneyLine->home_implied_probability - 2;
+            $awayWinProbability = $moneyLine->away_implied_probability - 2;
+        } else {
+            // Default to 50/50 if no moneyline available
+            $homeWinProbability = 50;
+            $awayWinProbability = 50;
+        }
+
         $spreadValue = abs($this->spread);
         $isHalf = (floor($spreadValue) != $spreadValue);
         $totalGames = $marginModel::sum('occurrences');
@@ -65,7 +81,7 @@ class Spread extends Model
                 // For spreads like -14.5
                 $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-                return round((($marginGames / 2) / $totalGames * 100) + 50, 1);
+                return round((($marginGames / $totalGames) * $awayWinProbability) + $homeWinProbability, 1);
             } else {
                 // For spreads like -14
                 $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
@@ -74,14 +90,14 @@ class Spread extends Model
                     ->first()
                     ->occurrences ?? 0;
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                return round((($marginGames / 2) / $adjustedTotal * 100) + 50, 1);
+                return round((($marginGames / $adjustedTotal) * $awayWinProbability) + $homeWinProbability, 1);
             }
         } else {  // Home team is underdog
             if ($isHalf) {
                 // For spreads like +14.5
                 $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-                $favProb = (($marginGames / 2) / $totalGames * 100) + 50;
+                $favProb = (($marginGames / $totalGames) * $homeWinProbability) + $awayWinProbability;
                 return round(100 - $favProb, 1);
             } else {
                 // For spreads like +14
@@ -91,7 +107,7 @@ class Spread extends Model
                     ->first()
                     ->occurrences ?? 0;
                 $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                $favProb = (($marginGames / 2) / $adjustedTotal * 100) + 50;
+                $favProb = (($marginGames / $adjustedTotal) * $homeWinProbability) + $awayWinProbability;
                 return round(100 - $favProb, 1);
             }
         }
@@ -109,8 +125,22 @@ class Spread extends Model
             $probability = 100 / ($odds + 100) * 100;
         }
 
-        // Get the spread adjustment from cover_probability
-        $spreadAdjustment = abs($this->cover_probability - 50);
+        // Get moneyline baseline probability
+        $moneyLine = $this->game->moneyLines()
+            ->where('casino_id', $this->casino_id)
+            ->latest('recorded_at')
+            ->first();
+
+        $baselineProbability = 50; // Default fallback
+        if ($moneyLine) {
+            // Use the appropriate team's baseline probability (subtract 2% for vig)
+            $baselineProbability = $this->spread < 0 
+                ? ($moneyLine->home_implied_probability - 2) // Home is favorite
+                : ($moneyLine->away_implied_probability - 2); // Away is favorite
+        }
+
+        // Get the spread adjustment from cover_probability using actual baseline
+        $spreadAdjustment = abs($this->cover_probability - $baselineProbability);
 
         // For favorites (negative spread), add the spread advantage
         // For underdogs (positive spread), subtract the spread disadvantage
@@ -134,8 +164,19 @@ class Spread extends Model
             $probability = 100 / ($odds + 100) * 100;
         }
 
-        // Get the spread adjustment from cover_probability
-        $spreadAdjustment = abs($this->cover_probability - 50);
+        // Get moneyline baseline probability for home team
+        $moneyLine = $this->game->moneyLines()
+            ->where('casino_id', $this->casino_id)
+            ->latest('recorded_at')
+            ->first();
+
+        $homeBaselineProbability = 50; // Default fallback
+        if ($moneyLine) {
+            $homeBaselineProbability = $moneyLine->home_implied_probability - 2; // Subtract 2% for vig
+        }
+
+        // Get the spread adjustment from cover_probability using actual home baseline
+        $spreadAdjustment = abs($this->cover_probability - $homeBaselineProbability);
 
         // If home team is favorite (negative spread), add the advantage
         // If home team is underdog (positive spread), subtract the disadvantage
@@ -159,8 +200,19 @@ class Spread extends Model
             $probability = 100 / ($odds + 100) * 100;
         }
 
-        // Get the spread adjustment from cover_probability
-        $spreadAdjustment = abs($this->cover_probability - 50);
+        // Get moneyline baseline probability for away team
+        $moneyLine = $this->game->moneyLines()
+            ->where('casino_id', $this->casino_id)
+            ->latest('recorded_at')
+            ->first();
+
+        $awayBaselineProbability = 50; // Default fallback
+        if ($moneyLine) {
+            $awayBaselineProbability = $moneyLine->away_implied_probability - 2; // Subtract 2% for vig
+        }
+
+        // Get the spread adjustment from cover_probability using actual away baseline
+        $spreadAdjustment = abs($this->cover_probability - $awayBaselineProbability);
 
         // If away team is favorite (positive spread), add the advantage
         // If away team is underdog (negative spread), subtract the disadvantage
