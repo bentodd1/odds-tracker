@@ -76,32 +76,45 @@ class Spread extends Model
         $isHalf = (floor($spreadValue) != $spreadValue);
         $totalGames = $marginModel::sum('occurrences');
 
-        // Calculate the probability that the margin is >= spreadValue
-        // This represents the probability the favorite covers
+        // Determine who the TRUE favorite is based on moneyline win probability
+        $homeFavorite = $homeWinProbability > $awayWinProbability;
+        
+        // Calculate the probability that the TRUE favorite covers by the spread amount
         if ($isHalf) {
             // For half spreads like 14.5, we need margins > floor(spreadValue)
-            $favoriteCoversGames = $marginModel::where('margin', '>', floor($spreadValue))
+            $trueFavoriteCoversGames = $marginModel::where('margin', '>', floor($spreadValue))
                 ->sum('occurrences');
         } else {
             // For whole spreads like 14, we need margins > spreadValue  
-            $favoriteCoversGames = $marginModel::where('margin', '>', $spreadValue)
+            $trueFavoriteCoversGames = $marginModel::where('margin', '>', $spreadValue)
                 ->sum('occurrences');
         }
 
-        $favoriteCoversProb = $favoriteCoversGames / $totalGames;
+        $trueFavoriteCoversProb = $trueFavoriteCoversGames / $totalGames;
 
         if ($this->spread < 0) {
-            // Home team is favorite
-            // Cover probability = P(home wins) * P(home covers | home wins) + P(away wins) * P(home covers | away wins)
-            // When away wins, home can't cover a negative spread, so second term is 0
-            // When home wins, they cover with probability = favoriteCoversProb
-            return round(($homeWinProbability * $favoriteCoversProb) * 100, 1);
+            // Home team gets negative spread (betting favorite)
+            if ($homeFavorite) {
+                // Home is both betting favorite AND true favorite
+                // P(home covers -spread) = P(home wins) * P(true favorite covers by spread+)
+                return round(($homeWinProbability * $trueFavoriteCoversProb) * 100, 1);
+            } else {
+                // Home is betting favorite but away is true favorite (unusual case)
+                // P(home covers -spread) = P(home wins) * P(underdog covers when they win) + P(away wins) * 0
+                // When true underdog wins, they rarely cover large spreads, so use (1 - trueFavoriteCoversProb)
+                return round(($homeWinProbability * (1 - $trueFavoriteCoversProb)) * 100, 1);
+            }
         } else {
-            // Away team is favorite  
-            // Cover probability for home = P(home wins) * 1 + P(away wins) * P(home covers | away wins)
-            // When home wins, they always cover a positive spread
-            // When away wins, home covers with probability = (1 - favoriteCoversProb)
-            return round(($homeWinProbability * 1 + $awayWinProbability * (1 - $favoriteCoversProb)) * 100, 1);
+            // Home team gets positive spread (betting underdog)
+            if ($homeFavorite) {
+                // Home is true favorite but betting underdog (unusual case) 
+                // P(home covers +spread) = P(home wins) * 1 + P(away wins) * P(underdog covers when favorite wins)
+                return round(($homeWinProbability * 1 + $awayWinProbability * (1 - $trueFavoriteCoversProb)) * 100, 1);
+            } else {
+                // Away is true favorite, home is true underdog (normal case)
+                // P(home covers +spread) = P(home wins) * 1 + P(away wins) * P(underdog covers when favorite wins)
+                return round(($homeWinProbability * 1 + $awayWinProbability * (1 - $trueFavoriteCoversProb)) * 100, 1);
+            }
         }
     }
 
