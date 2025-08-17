@@ -64,52 +64,44 @@ class Spread extends Model
 
         // Calculate baseline win probabilities (subtract 2% for vig)
         if ($moneyLine) {
-            $homeWinProbability = $moneyLine->home_implied_probability - 2;
-            $awayWinProbability = $moneyLine->away_implied_probability - 2;
+            $homeWinProbability = ($moneyLine->home_implied_probability - 2) / 100;
+            $awayWinProbability = ($moneyLine->away_implied_probability - 2) / 100;
         } else {
             // Default to 50/50 if no moneyline available
-            $homeWinProbability = 50;
-            $awayWinProbability = 50;
+            $homeWinProbability = 0.5;
+            $awayWinProbability = 0.5;
         }
 
         $spreadValue = abs($this->spread);
         $isHalf = (floor($spreadValue) != $spreadValue);
         $totalGames = $marginModel::sum('occurrences');
 
-        if ($this->spread < 0) {  // Home team is favorite
-            if ($isHalf) {
-                // For spreads like -14.5
-                $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
-                    ->sum('occurrences');
-                return round((($marginGames / $totalGames) * $awayWinProbability) + $homeWinProbability, 1);
-            } else {
-                // For spreads like -14
-                $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
-                    ->sum('occurrences');
-                $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
-                    ->first()
-                    ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                return round((($marginGames / $adjustedTotal) * $awayWinProbability) + $homeWinProbability, 1);
-            }
-        } else {  // Home team is underdog
-            if ($isHalf) {
-                // For spreads like +14.5
-                $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
-                    ->sum('occurrences');
-                $favProb = (($marginGames / $totalGames) * $homeWinProbability) + $awayWinProbability;
-                return round(100 - $favProb, 1);
-            } else {
-                // For spreads like +14
-                $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
-                    ->sum('occurrences');
-                $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
-                    ->first()
-                    ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                $favProb = (($marginGames / $adjustedTotal) * $homeWinProbability) + $awayWinProbability;
-                return round(100 - $favProb, 1);
-            }
+        // Calculate the probability that the margin is >= spreadValue
+        // This represents the probability the favorite covers
+        if ($isHalf) {
+            // For half spreads like 14.5, we need margins > floor(spreadValue)
+            $favoriteCoversGames = $marginModel::where('margin', '>', floor($spreadValue))
+                ->sum('occurrences');
+        } else {
+            // For whole spreads like 14, we need margins > spreadValue  
+            $favoriteCoversGames = $marginModel::where('margin', '>', $spreadValue)
+                ->sum('occurrences');
+        }
+
+        $favoriteCoversProb = $favoriteCoversGames / $totalGames;
+
+        if ($this->spread < 0) {
+            // Home team is favorite
+            // Cover probability = P(home wins) * P(home covers | home wins) + P(away wins) * P(home covers | away wins)
+            // When away wins, home can't cover a negative spread, so second term is 0
+            // When home wins, they cover with probability = favoriteCoversProb
+            return round(($homeWinProbability * $favoriteCoversProb) * 100, 1);
+        } else {
+            // Away team is favorite  
+            // Cover probability for home = P(home wins) * 1 + P(away wins) * P(home covers | away wins)
+            // When home wins, they always cover a positive spread
+            // When away wins, home covers with probability = (1 - favoriteCoversProb)
+            return round(($homeWinProbability * 1 + $awayWinProbability * (1 - $favoriteCoversProb)) * 100, 1);
         }
     }
 
