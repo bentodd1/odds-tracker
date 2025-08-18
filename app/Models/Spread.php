@@ -40,6 +40,43 @@ class Spread extends Model
         return $this->hasOne(SpreadResult::class);
     }
 
+    public function moneyLine()
+    {
+        return $this->hasOne(MoneyLine::class, 'game_id', 'game_id')
+            ->where('casino_id', $this->casino_id);
+    }
+
+    private function getDynamicDivisor()
+    {
+        // Try to get the moneyline for the same casino and game
+        $moneyLine = $this->moneyLine;
+        
+        if (!$moneyLine) {
+            // Fallback to any moneyline for this game if no match by casino
+            $moneyLine = $this->game->moneyLines()->first();
+        }
+        
+        if (!$moneyLine) {
+            // Ultimate fallback to constant 2 if no moneyline data available
+            return 2;
+        }
+        
+        // Determine which team is the favorite and get their moneyline odds
+        $favoriteOdds = $this->spread < 0 ? $moneyLine->home_odds : $moneyLine->away_odds;
+        
+        // Calculate implied probability from moneyline odds
+        if ($favoriteOdds < 0) {
+            $impliedProbability = abs($favoriteOdds) / (abs($favoriteOdds) + 100) * 100;
+        } else {
+            $impliedProbability = 100 / ($favoriteOdds + 100) * 100;
+        }
+        
+        // Subtract 2 percentage points and divide by 10 to get decimal divisor
+        $adjustedProbability = max($impliedProbability - 2, 1); // Ensure minimum of 1% to avoid division issues
+        
+        return $adjustedProbability / 10;
+    }
+
     public function getCoverProbabilityAttribute()
     {
         // Get the sport key from the game
@@ -59,13 +96,14 @@ class Spread extends Model
         $spreadValue = abs($this->spread);
         $isHalf = (floor($spreadValue) != $spreadValue);
         $totalGames = $marginModel::sum('occurrences');
+        $dynamicDivisor = $this->getDynamicDivisor();
 
         if ($this->spread < 0) {  // Home team is favorite
             if ($isHalf) {
                 // For spreads like -14.5
                 $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-                return round((($marginGames / 2) / $totalGames * 100) + 50, 1);
+                return round((($marginGames / $dynamicDivisor) / $totalGames * 100) + 50, 1);
             } else {
                 // For spreads like -14
                 $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
@@ -73,15 +111,15 @@ class Spread extends Model
                 $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                return round((($marginGames / 2) / $adjustedTotal * 100) + 50, 1);
+                $adjustedTotal = $totalGames - ($currentMarginGames / $dynamicDivisor);
+                return round((($marginGames / $dynamicDivisor) / $adjustedTotal * 100) + 50, 1);
             }
         } else {  // Home team is underdog
             if ($isHalf) {
                 // For spreads like +14.5
                 $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-                $favProb = (($marginGames / 2) / $totalGames * 100) + 50;
+                $favProb = (($marginGames / $dynamicDivisor) / $totalGames * 100) + 50;
                 return round(100 - $favProb, 1);
             } else {
                 // For spreads like +14
@@ -90,8 +128,8 @@ class Spread extends Model
                 $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                $favProb = (($marginGames / 2) / $adjustedTotal * 100) + 50;
+                $adjustedTotal = $totalGames - ($currentMarginGames / $dynamicDivisor);
+                $favProb = (($marginGames / $dynamicDivisor) / $adjustedTotal * 100) + 50;
                 return round(100 - $favProb, 1);
             }
         }
