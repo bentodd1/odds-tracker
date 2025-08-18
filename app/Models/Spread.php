@@ -74,9 +74,9 @@ class Spread extends Model
             // Calculate how much stronger the favorite is than 50%
             $strengthAbove50 = $winPercent - 0.5;
             
-            // Make a moderate adjustment: reduce divisor by a fraction of the strength
-            // This gives favorites a boost, but not as dramatic
-            return max(2 - ($strengthAbove50 * 0.8), 1.2);
+            // Make a stronger adjustment: reduce divisor by a fraction of the strength
+            // This gives favorites a bigger boost
+            return max(2 - ($strengthAbove50 * 1.2), 1.0);
             
         } else {
             // Away team is favorite, home team is underdog
