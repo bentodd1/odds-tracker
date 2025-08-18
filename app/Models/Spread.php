@@ -163,28 +163,26 @@ class Spread extends Model
 
     public function getCoverProbabilityWithJuiceAttribute()
     {
-        // Get base probability from odds
+        // Start with the base probability from our wash calculation
+        $baseProbability = $this->cover_probability;
+
+        // Get the appropriate odds for this bet
         $odds = $this->spread < 0 ? $this->home_odds : $this->away_odds;
 
-        // Calculate the raw implied probability from the odds
+        // Calculate the juice cost from the odds
         if ($odds < 0) {
-            $probability = abs($odds) / (abs($odds) + 100) * 100;
+            $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
         } else {
-            $probability = 100 / ($odds + 100) * 100;
+            $impliedProbability = 100 / ($odds + 100) * 100;
         }
 
-        // Get the spread adjustment from cover_probability
-        $spreadAdjustment = abs($this->cover_probability - 50);
+        // Juice cost is the difference from fair odds (50%)
+        $juiceCost = $impliedProbability - 50;
 
-        // For favorites (negative spread), add the spread advantage
-        // For underdogs (positive spread), subtract the spread disadvantage
-        if ($this->spread < 0) {
-            $probability += $spreadAdjustment;
-        } else {
-            $probability -= $spreadAdjustment;
-        }
+        // Add the juice cost to the base probability
+        $probabilityWithJuice = $baseProbability + $juiceCost;
 
-        return round($probability, 1);
+        return round($probabilityWithJuice, 1);
     }
 
     public function getHomeCoverProbabilityWithJuiceAttribute()
