@@ -115,42 +115,49 @@ class Spread extends Model
         $spreadValue = abs($this->spread);
         $isHalf = (floor($spreadValue) != $spreadValue);
         $totalGames = $marginModel::sum('occurrences');
-        $dynamicDivisor = $this->getDynamicDivisor();
 
-        if ($this->spread < 0) {  // Home team is favorite
-            if ($isHalf) {
-                // For spreads like -14.5
-                $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
-                    ->sum('occurrences');
-                return round((($marginGames / $dynamicDivisor) / $totalGames * 100) + 50, 1);
-            } else {
-                // For spreads like -14
-                $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
-                    ->sum('occurrences');
-                $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
-                    ->first()
-                    ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / $dynamicDivisor);
-                return round((($marginGames / $dynamicDivisor) / $adjustedTotal * 100) + 50, 1);
-            }
-        } else {  // Home team is underdog
-            if ($isHalf) {
-                // For spreads like +14.5
-                $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
-                    ->sum('occurrences');
-                $favProb = (($marginGames / $dynamicDivisor) / $totalGames * 100) + 50;
-                return round(100 - $favProb, 1);
-            } else {
-                // For spreads like +14
-                $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
-                    ->sum('occurrences');
-                $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
-                    ->first()
-                    ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / $dynamicDivisor);
-                $favProb = (($marginGames / $dynamicDivisor) / $adjustedTotal * 100) + 50;
-                return round(100 - $favProb, 1);
-            }
+        if ($isHalf) {
+            // For half spreads like -7.5 or +7.5
+            // Use same methodology as whole spreads but no pushes
+            // Games at (spread-1) and under are clear favorite wins - so for -7.5, margins 6 and under
+            $clearWins = $marginModel::where('margin', '<=', floor($spreadValue) - 1)
+                ->sum('occurrences');
+            
+            // Games at exactly the floor spread value (now count as wins, no pushes)
+            $floorGames = $marginModel::where('margin', '=', floor($spreadValue))
+                ->sum('occurrences');
+            
+            // Remaining games (over the floor spread value) split 50/50
+            $remainingGames = $totalGames - $clearWins - $floorGames;
+            $remainingWonGames = $remainingGames * 0.5;
+            
+            // Calculate probability: clear wins + all floor games + half of remaining
+            $favoriteWins = $clearWins + $floorGames + $remainingWonGames;
+            $probability = ($favoriteWins / $totalGames) * 100;
+            
+            // Return based on whether home or away is favorite
+            return $this->spread < 0 ? round($probability, 1) : round(100 - $probability, 1);
+        } else {
+            // For whole spreads like -7 or +7
+            // Games at (spread-1) and under are clear favorite wins - so for -7, margins 6 and under
+            $clearWins = $marginModel::where('margin', '<=', $spreadValue - 1)
+                ->sum('occurrences');
+            
+            // Games at exactly the spread value (wash - push)
+            $washGames = $marginModel::where('margin', '=', $spreadValue)
+                ->sum('occurrences');
+            
+            // Remaining games (over the spread value) split 50/50
+            $remainingGames = $totalGames - $clearWins - $washGames;
+            $remainingWonGames = $remainingGames * 0.5;
+            
+            // Calculate probability (excluding wash games from total since they're pushes)
+            $adjustedTotal = $totalGames - $washGames;
+            $favoriteWins = $clearWins + $remainingWonGames;
+            $probability = ($favoriteWins / $adjustedTotal) * 100;
+            
+            // Return based on whether home or away is favorite
+            return $this->spread < 0 ? round($probability, 1) : round(100 - $probability, 1);
         }
     }
 
