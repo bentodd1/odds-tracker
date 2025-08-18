@@ -28,25 +28,6 @@
            class="{{ $currentPage === 'nhl' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-gray-800' }}">
             NHL
         </a>
-        <a href="{{ route('accuweather.analysis') }}"
-           class="{{ $currentPage === 'accuweather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
-            Weather Analysis
-        </a>
-        <a href="{{ route('nws.analysis') }}"
-           class="{{ $currentPage === 'nws-analysis' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
-            NWS Weather Analysis
-        </a>
-        <a href="{{ route('dashboard.weather') }}"
-           class="{{ $currentPage === 'weather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
-            Weather Dashboard
-        </a>
-        <a href="{{ route('dashboard.nws-weather') }}"
-           class="{{ $currentPage === 'nws-weather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
-            NWS Weather Dashboard
-        </a>
-        <a href="{{ route('dashboard.combined-weather') }}"
-           class="{{ $currentPage === 'combined-weather' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600' }}">
-            Combined Weather Dashboard
-        </a>
+        
     </div>
 </div>

@@ -48,8 +48,6 @@ return [
         'secret' => env('STRIPE_SECRET'),
     ],
 
-    'openweathermap' => [
-        'key' => env('OPENWEATHERMAP_API_KEY'),
-    ],
+
 
 ];

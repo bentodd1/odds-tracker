@@ -33,40 +33,6 @@ app(Schedule::class)->command('dratings:fetch-mlb')
                     ->at('23:59')
                     ->appendOutputTo(storage_path('logs/dratings-mlb.log'));
 
-// Add Kalshi weather data fetch hourly
-app(Schedule::class)->command('kalshi:fetch-weather')
-                     ->hourly()
-                     ->appendOutputTo(storage_path('logs/kalshi-weather.log'));
 
-// Run AccuWeather data collection hourly at 1 AM Central Time
-app(Schedule::class)->command('fetch:weather-data')
-    ->hourly()
-    ->appendOutputTo(storage_path('logs/accuweather.log'));
-
-// Record actual weather data daily at 2 AM Central Time (after predictions are collected)
-app(Schedule::class)->command('weather:record-current')
-                     ->timezone('America/Chicago')
-                     ->dailyAt('02:00')
-                     ->appendOutputTo(storage_path('logs/weather-current.log'));
-
-// Schedule NWS weather data fetching for today and tomorrow
-$today = now()->toDateString();
-$tomorrow = now()->addDay()->toDateString();
-
-app(Schedule::class)->command("weather:fetch-nws --date={$today}")
-    ->hourly()
-    ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/nws-weather.log'));
-
-app(Schedule::class)->command("weather:fetch-nws --date={$tomorrow}")
-    ->hourly()
-    ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/nws-weather.log'));
-
-// Schedule NWS actual weather recording
-app(Schedule::class)->command('weather:record-nws-actual')
-    ->dailyAt('01:00')
-    ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/nws-actual.log'));
 
 
