@@ -61,26 +61,38 @@ class Spread extends Model
             return 2;
         }
         
+        // Calculate the deviation from 50% (even money)
         if ($this->spread < 0) {
-            // Home team is favorite - use favorite win percent
+            // Home team is favorite
             $favoriteOdds = $moneyLine->home_odds;
             if ($favoriteOdds < 0) {
                 $winPercent = abs($favoriteOdds) / (abs($favoriteOdds) + 100);
             } else {
                 $winPercent = 100 / ($favoriteOdds + 100);
             }
-            // For favorites: 2 - (favorite win percent) = smaller divisor = higher cover probability
-            return max(2 - $winPercent, 0.1); // Ensure minimum divisor to avoid division issues
+            
+            // Calculate how much stronger the favorite is than 50%
+            $strengthAbove50 = $winPercent - 0.5;
+            
+            // Make a smaller adjustment: reduce divisor by a fraction of the strength
+            // This gives favorites a boost, but not as dramatic
+            return max(2 - ($strengthAbove50 * 0.5), 1.2);
+            
         } else {
-            // Away team is favorite - use underdog win percent (home team)
+            // Away team is favorite, home team is underdog
             $underdogOdds = $moneyLine->home_odds;
             if ($underdogOdds < 0) {
                 $winPercent = abs($underdogOdds) / (abs($underdogOdds) + 100);
             } else {
                 $winPercent = 100 / ($underdogOdds + 100);
             }
-            // For underdogs: 2 + (underdog win percent) = larger divisor = lower cover probability
-            return 2 + $winPercent;
+            
+            // Calculate how much weaker the underdog is than 50%
+            $weaknessBelow50 = 0.5 - $winPercent;
+            
+            // Make a smaller adjustment: increase divisor by a fraction of the weakness
+            // This reduces underdog cover probability, but not as dramatically
+            return 2 + ($weaknessBelow50 * 0.5);
         }
     }
 
