@@ -61,14 +61,14 @@ class Spread extends Model
             return 2;
         }
         
-        // Determine which team is the underdog and get their moneyline odds
-        $underdogOdds = $this->spread < 0 ? $moneyLine->away_odds : $moneyLine->home_odds;
+        // Determine which team is the favorite and get their moneyline odds
+        $favoriteOdds = $this->spread < 0 ? $moneyLine->home_odds : $moneyLine->away_odds;
         
-        // Calculate implied probability from underdog moneyline odds
-        if ($underdogOdds < 0) {
-            $impliedProbability = abs($underdogOdds) / (abs($underdogOdds) + 100) * 100;
+        // Calculate implied probability from moneyline odds
+        if ($favoriteOdds < 0) {
+            $impliedProbability = abs($favoriteOdds) / (abs($favoriteOdds) + 100) * 100;
         } else {
-            $impliedProbability = 100 / ($underdogOdds + 100) * 100;
+            $impliedProbability = 100 / ($favoriteOdds + 100) * 100;
         }
         
         // Subtract 2 percentage points and divide by 10 to get decimal divisor
