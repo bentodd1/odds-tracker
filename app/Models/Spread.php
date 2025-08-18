@@ -65,7 +65,7 @@ class Spread extends Model
                 // For spreads like -14.5
                 $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-                return round((($marginGames / 2) / $totalGames * 100) + 50, 1);
+                return round((($marginGames / 1) / $totalGames * 100) + 50, 1);
             } else {
                 // For spreads like -14
                 $marginGames = $marginModel::where('margin', '<=', $spreadValue - 1)
@@ -73,15 +73,15 @@ class Spread extends Model
                 $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                return round((($marginGames / 2) / $adjustedTotal * 100) + 50, 1);
+                $adjustedTotal = $totalGames - ($currentMarginGames / 1);
+                return round((($marginGames / 1) / $adjustedTotal * 100) + 50, 1);
             }
         } else {  // Home team is underdog
             if ($isHalf) {
                 // For spreads like +14.5
                 $marginGames = $marginModel::where('margin', '<=', floor($spreadValue))
                     ->sum('occurrences');
-                $favProb = (($marginGames / 2) / $totalGames * 100) + 50;
+                $favProb = (($marginGames / 1) / $totalGames * 100) + 50;
                 return round(100 - $favProb, 1);
             } else {
                 // For spreads like +14
@@ -90,8 +90,8 @@ class Spread extends Model
                 $currentMarginGames = $marginModel::where('margin', '=', $spreadValue)
                     ->first()
                     ->occurrences ?? 0;
-                $adjustedTotal = $totalGames - ($currentMarginGames / 2);
-                $favProb = (($marginGames / 2) / $adjustedTotal * 100) + 50;
+                $adjustedTotal = $totalGames - ($currentMarginGames / 1);
+                $favProb = (($marginGames / 1) / $adjustedTotal * 100) + 50;
                 return round(100 - $favProb, 1);
             }
         }
