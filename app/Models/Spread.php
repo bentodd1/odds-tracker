@@ -204,6 +204,30 @@ class Spread extends Model
         return round(100 - $this->win_probability, 1);
     }
 
+    public function getHomeMoneylineImpliedProbabilityAttribute()
+    {
+        // Get the moneyline for this game/casino to compare implied probability
+        $moneyLine = $this->moneyLine;
+        
+        if (!$moneyLine) {
+            return null;
+        }
+        
+        return round($moneyLine->home_implied_probability, 1);
+    }
+
+    public function getAwayMoneylineImpliedProbabilityAttribute()
+    {
+        // Get the moneyline for this game/casino to compare implied probability
+        $moneyLine = $this->moneyLine;
+        
+        if (!$moneyLine) {
+            return null;
+        }
+        
+        return round($moneyLine->away_implied_probability, 1);
+    }
+
     public function getCoverProbabilityWithJuiceAttribute()
     {
         // Start with the fair probability from normal distribution
