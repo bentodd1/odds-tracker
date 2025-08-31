@@ -178,19 +178,18 @@ class Spread extends Model
         };
 
         // For outright win probability, we need P(home margin > 0)
-        // If spread is negative (home favored): P(home wins) = 1 - Φ(|spread|/σ)  
-        // If spread is positive (home underdog): P(home wins) = 1 - Φ(spread/σ)
+        // The spread tells us the expected margin: negative = home favored, positive = away favored
         
         if ($this->spread < 0) {
             // Home is favored by |spread| points
-            // P(home wins) = P(margin > 0) when home is expected to win by |spread|
-            // This is higher than 50% since they're favored
+            // Expected margin is positive (home wins by |spread|)
+            // P(home wins) = P(margin > 0) = Φ(|spread|/σ)
             $zScore = abs($this->spread) / $sigma;
-            $homeWinProbability = (1 - $this->normalCDF($zScore)) * 100;
+            $homeWinProbability = $this->normalCDF($zScore) * 100;
         } else {
-            // Home is underdog, gets +spread points
-            // P(home wins) = P(margin > 0) when home is expected to lose by spread
-            // This is lower than 50% since they're underdogs
+            // Home is underdog by spread points  
+            // Expected margin is negative (home loses by spread)
+            // P(home wins) = P(margin > 0) = 1 - Φ(spread/σ)
             $zScore = $this->spread / $sigma;
             $homeWinProbability = (1 - $this->normalCDF($zScore)) * 100;
         }
