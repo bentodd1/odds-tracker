@@ -216,12 +216,12 @@ class GameTransformationService
                 'home' => [
                     'line'        => $spread->spread,
                     'odds'        => $spread->home_odds,
-                    'probability' => $spread->home_cover_probability_with_juice,
+                    'probability' => $spread->win_probability,
                 ],
                 'away' => [
                     'line'        => -$spread->spread,
                     'odds'        => $spread->away_odds,
-                    'probability' => $spread->away_cover_probability_with_juice,
+                    'probability' => $spread->away_win_probability,
                 ],
             ],
             'moneyLine' => [
