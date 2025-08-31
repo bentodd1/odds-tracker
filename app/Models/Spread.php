@@ -205,30 +205,34 @@ class Spread extends Model
 
     public function getWinProbabilityWithJuiceAttribute()
     {
-        // For home team, use home odds to calculate implied probability directly
+        // Start with fair win probability from spread, then add vig from home odds
+        $baseProbability = $this->win_probability;
         $odds = $this->home_odds;
-        
+
         if ($odds < 0) {
             $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
         } else {
             $impliedProbability = 100 / ($odds + 100) * 100;
         }
-        
-        return round($impliedProbability, 1);
+
+        $juiceCost = $impliedProbability - 50;
+        return round($baseProbability + $juiceCost, 1);
     }
 
     public function getAwayWinProbabilityWithJuiceAttribute()
     {
-        // For away team, use away odds to calculate implied probability directly
+        // Start with fair away win probability from spread, then add vig from away odds
+        $baseProbability = $this->away_win_probability;
         $odds = $this->away_odds;
-        
+
         if ($odds < 0) {
             $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
         } else {
             $impliedProbability = 100 / ($odds + 100) * 100;
         }
-        
-        return round($impliedProbability, 1);
+
+        $juiceCost = $impliedProbability - 50;
+        return round($baseProbability + $juiceCost, 1);
     }
 
     public function getHomeMoneylineImpliedProbabilityAttribute()
