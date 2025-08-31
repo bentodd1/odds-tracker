@@ -203,6 +203,38 @@ class Spread extends Model
         return round(100 - $this->win_probability, 1);
     }
 
+    public function getWinProbabilityWithJuiceAttribute()
+    {
+        // Add vig to the win probability
+        $baseProbability = $this->win_probability;
+        $odds = $this->spread < 0 ? $this->home_odds : $this->away_odds;
+
+        if ($odds < 0) {
+            $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $impliedProbability = 100 / ($odds + 100) * 100;
+        }
+
+        $juiceCost = $impliedProbability - 50;
+        return round($baseProbability + $juiceCost, 1);
+    }
+
+    public function getAwayWinProbabilityWithJuiceAttribute()
+    {
+        // Add vig to the away win probability  
+        $baseProbability = $this->away_win_probability;
+        $odds = $this->away_odds;
+
+        if ($odds < 0) {
+            $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $impliedProbability = 100 / ($odds + 100) * 100;
+        }
+
+        $juiceCost = $impliedProbability - 50;
+        return round($baseProbability + $juiceCost, 1);
+    }
+
     public function getHomeMoneylineImpliedProbabilityAttribute()
     {
         // Get the moneyline for this game/casino to compare implied probability
