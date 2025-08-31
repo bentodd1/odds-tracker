@@ -66,38 +66,47 @@ class SpreadJuiceTest extends TestCase
         $baseProbability = $spread->cover_probability;
         $probabilityWithJuice = $spread->cover_probability_with_juice;
 
-        echo "\n=== No Juice Calculation Test ===";
+        echo "\n=== Juice Calculation Test ===";
         echo "\nBase probability (normal distribution): " . $baseProbability . "%";
-        echo "\nProbability with juice (should be same): " . $probabilityWithJuice . "%";
+        echo "\nJuice cost from -110 odds: " . (52.4 - 50) . "% = 2.4%";
+        echo "\nExpected total: " . $baseProbability . "% + 2.4% = " . ($baseProbability + 2.4) . "%";
+        echo "\nActual calculation: " . $probabilityWithJuice . "%";
 
-        // Since we removed vig, both should be equal
-        $this->assertEquals($baseProbability, $probabilityWithJuice);
+        // Test that juice adds exactly 2.4% for -110 odds
+        $this->assertEquals($baseProbability + 2.4, $probabilityWithJuice);
     }
 
     public function test_juice_calculation_for_different_odds()
     {
-        // Test that juice calculation now returns base probability regardless of odds
-        $testCases = [-105, -120, +100, +110];
+        // Test with different odds values
+        $testCases = [
+            ['odds' => -105, 'expected_juice' => 1.2], // 105/(105+100)*100 - 50 = 1.2%
+            ['odds' => -120, 'expected_juice' => 4.5], // 120/(120+100)*100 - 50 = 4.5%
+            ['odds' => +100, 'expected_juice' => 0.0], // 100/(100+100)*100 - 50 = 0%
+            ['odds' => +110, 'expected_juice' => -2.4], // 100/(110+100)*100 - 50 = -2.4%
+        ];
 
-        foreach ($testCases as $odds) {
+        foreach ($testCases as $case) {
             $spread = Spread::create([
                 'game_id' => $this->game->id,
                 'casino_id' => $this->casino->id,
                 'spread' => -7,
-                'home_odds' => $odds,
-                'away_odds' => $odds,
+                'home_odds' => $case['odds'],
+                'away_odds' => $case['odds'],
                 'recorded_at' => Carbon::now()
             ]);
 
             $baseProbability = $spread->cover_probability;
             $probabilityWithJuice = $spread->cover_probability_with_juice;
+            $expectedTotal = $baseProbability + $case['expected_juice'];
             
-            echo "\n\nTesting odds: " . $odds;
+            echo "\n\nTesting odds: " . $case['odds'];
             echo "\nBase probability: " . $baseProbability . "%";
-            echo "\nWith juice: " . $probabilityWithJuice . "%";
+            echo "\nExpected juice: " . $case['expected_juice'] . "%";
+            echo "\nExpected total: " . $expectedTotal . "%";
+            echo "\nActual: " . $probabilityWithJuice . "%";
 
-            // Should be equal since we removed vig calculation
-            $this->assertEquals($baseProbability, $probabilityWithJuice);
+            $this->assertEqualsWithDelta($expectedTotal, $probabilityWithJuice, 0.1);
         }
     }
 }

@@ -162,21 +162,60 @@ class Spread extends Model
 
     public function getCoverProbabilityWithJuiceAttribute()
     {
-        // Since we're using normal distribution which gives fair probability,
-        // return the same as cover_probability (no additional vig)
-        return $this->cover_probability;
+        // Start with the fair probability from normal distribution
+        $baseProbability = $this->cover_probability;
+
+        // Get the appropriate odds for this bet
+        $odds = $this->spread < 0 ? $this->home_odds : $this->away_odds;
+
+        // Calculate the juice cost from the odds
+        if ($odds < 0) {
+            $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $impliedProbability = 100 / ($odds + 100) * 100;
+        }
+
+        // Juice cost is the difference from fair odds (50%)
+        $juiceCost = $impliedProbability - 50;
+
+        // Add the juice cost to the base probability
+        $probabilityWithJuice = $baseProbability + $juiceCost;
+
+        return round($probabilityWithJuice, 1);
     }
 
     public function getHomeCoverProbabilityWithJuiceAttribute()
     {
-        // Return fair probability for home team covering
-        return $this->spread < 0 ? $this->cover_probability : (100 - $this->cover_probability);
+        // Start with fair probability for home team covering
+        $baseProbability = $this->spread < 0 ? $this->cover_probability : (100 - $this->cover_probability);
+        
+        // Calculate juice from home odds
+        $odds = $this->home_odds;
+        if ($odds < 0) {
+            $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $impliedProbability = 100 / ($odds + 100) * 100;
+        }
+        
+        $juiceCost = $impliedProbability - 50;
+        return round($baseProbability + $juiceCost, 1);
     }
 
     public function getAwayCoverProbabilityWithJuiceAttribute()
     {
-        // Return fair probability for away team covering
-        return $this->spread > 0 ? $this->cover_probability : (100 - $this->cover_probability);
+        // Start with fair probability for away team covering  
+        $baseProbability = $this->spread > 0 ? $this->cover_probability : (100 - $this->cover_probability);
+        
+        // Calculate juice from away odds
+        $odds = $this->away_odds;
+        if ($odds < 0) {
+            $impliedProbability = abs($odds) / (abs($odds) + 100) * 100;
+        } else {
+            $impliedProbability = 100 / ($odds + 100) * 100;
+        }
+        
+        $juiceCost = $impliedProbability - 50;
+        return round($baseProbability + $juiceCost, 1);
     }
 
     public function getSpreadProbabilityAttribute()
