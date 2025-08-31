@@ -96,69 +96,68 @@ class Spread extends Model
         }
     }
 
+    private function erfApproximation($x)
+    {
+        // Abramowitz and Stegun approximation for error function
+        $a1 =  0.254829592;
+        $a2 = -0.284496736;
+        $a3 =  1.421413741;
+        $a4 = -1.453152027;
+        $a5 =  1.061405429;
+        $p  =  0.3275911;
+
+        $sign = $x < 0 ? -1 : 1;
+        $x = abs($x);
+
+        $t = 1.0 / (1.0 + $p * $x);
+        $y = 1.0 - ((((($a5 * $t + $a4) * $t) + $a3) * $t + $a2) * $t + $a1) * $t * exp(-$x * $x);
+
+        return $sign * $y;
+    }
+
+    private function normalCDF($z)
+    {
+        return 0.5 * (1 + $this->erfApproximation($z / sqrt(2)));
+    }
+
     public function getCoverProbabilityAttribute()
     {
         // Get the sport key from the game
         $sportKey = $this->game->sport->key;
         $sportIdentifier = str_contains($sportKey, '_') ? explode('_', $sportKey)[1] : $sportKey;
 
-        // Map sport to margin model
-        $marginModel = match (strtolower($sportIdentifier)) {
-            'nfl' => NflMargin::class,
-            'ncaaf' => NCAAFMargin::class,
-            'ncaab' => NCAABMargin::class,
-            'nba' => NBAMargin::class,
-            'mlb' => MLBMargin::class,
-            default => throw new \InvalidArgumentException("Unsupported sport: {$sportIdentifier}")
+        // Use sport-specific standard deviations based on Stern (1991) research
+        $sigma = match (strtolower($sportIdentifier)) {
+            'nfl' => 14,        // Pro football standard deviation
+            'ncaaf' => 15,      // College football standard deviation
+            'ncaab' => 14,      // College basketball (keeping existing)
+            'nba' => 14,        // NBA (keeping existing)
+            'mlb' => 14,        // MLB (keeping existing)
+            default => 14       // Default fallback
         };
 
-        $spreadValue = abs($this->spread);
-        $isHalf = (floor($spreadValue) != $spreadValue);
-        $totalGames = $marginModel::sum('occurrences');
-
-        if ($isHalf) {
-            // For half spreads like -7.5 or +7.5
-            // Use same methodology as whole spreads but no pushes
-            // Games at (spread-1) and under are clear favorite wins - so for -7.5, margins 6 and under
-            $clearWins = $marginModel::where('margin', '<=', floor($spreadValue) - 1)
-                ->sum('occurrences');
-            
-            // Games at exactly the floor spread value (now count as wins, no pushes)
-            $floorGames = $marginModel::where('margin', '=', floor($spreadValue))
-                ->sum('occurrences');
-            
-            // Remaining games (over the floor spread value) split 50/50
-            $remainingGames = $totalGames - $clearWins - $floorGames;
-            $remainingWonGames = $remainingGames * 0.5;
-            
-            // Calculate probability: clear wins + all floor games + half of remaining
-            $favoriteWins = $clearWins + $floorGames + $remainingWonGames;
-            $probability = ($favoriteWins / $totalGames) * 100;
-            
-            // Return based on whether home or away is favorite
-            return $this->spread < 0 ? round($probability, 1) : round(100 - $probability, 1);
+        // Calculate probability using normal distribution (Stern 1991 approach)
+        // P(favorite covers) = P(margin > spread)
+        // For negative spreads: home is favorite, we want P(home margin > |spread|) = 1 - Φ(|spread|/σ)
+        // For positive spreads: away is favorite, we want P(home margin > -|spread|) = Φ(|spread|/σ)
+        
+        $absSpread = abs($this->spread);
+        $zScore = $absSpread / $sigma;
+        
+        // Calculate cumulative normal distribution
+        $cumulativeProbability = $this->normalCDF($zScore);
+        
+        if ($this->spread < 0) {
+            // Home team is favorite by |spread| points
+            // P(home covers) = P(home margin > |spread|) = 1 - Φ(|spread|/σ)
+            $probability = (1 - $cumulativeProbability) * 100;
         } else {
-            // For whole spreads like -7 or +7
-            // Games at (spread-1) and under are clear favorite wins - so for -7, margins 6 and under
-            $clearWins = $marginModel::where('margin', '<=', $spreadValue - 1)
-                ->sum('occurrences');
-            
-            // Games at exactly the spread value (wash - push)
-            $washGames = $marginModel::where('margin', '=', $spreadValue)
-                ->sum('occurrences');
-            
-            // Remaining games (over the spread value) split 50/50
-            $remainingGames = $totalGames - $clearWins - $washGames;
-            $remainingWonGames = $remainingGames * 0.5;
-            
-            // Calculate probability (excluding wash games from total since they're pushes)
-            $adjustedTotal = $totalGames - $washGames;
-            $favoriteWins = $clearWins + $remainingWonGames;
-            $probability = ($favoriteWins / $adjustedTotal) * 100;
-            
-            // Return based on whether home or away is favorite
-            return $this->spread < 0 ? round($probability, 1) : round(100 - $probability, 1);
+            // Away team is favorite, home team gets +spread points
+            // P(home covers) = P(home margin > -|spread|) = Φ(|spread|/σ)
+            $probability = $cumulativeProbability * 100;
         }
+        
+        return round($probability, 1);
     }
 
     public function getCoverProbabilityWithJuiceAttribute()

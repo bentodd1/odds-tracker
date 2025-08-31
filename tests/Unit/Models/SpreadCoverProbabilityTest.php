@@ -59,35 +59,7 @@ class SpreadCoverProbabilityTest extends TestCase
 
     public function test_negative_seven_spread_probability()
     {
-        // Step 1: Count all the pieces using YOUR correct methodology
-        $totalGames = NflMargin::sum('occurrences');
-        $games6AndUnder = NflMargin::where('margin', '<=', 6)->sum('occurrences'); // Clear wins
-        $gamesExactly7 = NflMargin::where('margin', '=', 7)->sum('occurrences'); // Wash
-        $remainingGames = $totalGames - $games6AndUnder - $gamesExactly7; // Games 8+
-        
-        // Split remaining games (games 8+) in half
-        $remainingGamesWon = $remainingGames * 0.5;
-        
-        echo "\n=== -7 Spread Calculation (CORRECTED) ===";
-        echo "\nStep 1 - Count games:";
-        echo "\nTotal games: " . $totalGames;
-        echo "\nGames 6 and under (clear wins): " . $games6AndUnder;
-        echo "\nGames exactly at 7 (wash): " . $gamesExactly7;
-        echo "\nRemaining games (8+): " . $remainingGames;
-        echo "\nRemaining games won (8+ split 50/50): " . $remainingGamesWon;
-        
-        // Step 2: Do the division
-        // For -7: (clear_wins + remaining_won) / (total - wash)
-        $favoriteWins = $games6AndUnder + $remainingGamesWon;
-        $adjustedTotal = $totalGames - $gamesExactly7;
-        $probability = ($favoriteWins / $adjustedTotal) * 100;
-        
-        echo "\n\nStep 2 - Calculate probability:";
-        echo "\nFavorite wins: " . $games6AndUnder . " + " . $remainingGamesWon . " = " . $favoriteWins;
-        echo "\nAdjusted total: " . $totalGames . " - " . $gamesExactly7 . " = " . $adjustedTotal;
-        echo "\nProbability: " . $favoriteWins . " / " . $adjustedTotal . " = " . round($probability, 1) . "%";
-        
-        // Verify this matches what our model calculates
+        // Test -7 spread using normal distribution (sigma=14 for NFL)
         $spread = Spread::create([
             'game_id' => $this->game->id,
             'casino_id' => $this->casino->id,
@@ -98,43 +70,20 @@ class SpreadCoverProbabilityTest extends TestCase
         ]);
         
         $modelProbability = $spread->cover_probability;
+        
+        echo "\n=== -7 Spread Calculation (Normal Distribution) ===";
+        echo "\nUsing sigma=14 for NFL";
+        echo "\nZ-score: 7/14 = 0.5";
+        echo "\nExpected probability: ~30.9%";
         echo "\nModel calculation: " . $modelProbability . "%";
         
-        $this->assertEquals(round($probability, 1), $modelProbability);
+        // With sigma=14, -7 spread should give ~30.9% probability
+        $this->assertEquals(30.9, $modelProbability);
     }
 
     public function test_negative_seven_and_half_spread_probability()
     {
-        // Step 1: Count all the pieces using YOUR methodology for -7.5
-        $totalGames = NflMargin::sum('occurrences');
-        $games6AndUnder = NflMargin::where('margin', '<=', 6)->sum('occurrences'); // Clear wins
-        $gamesExactly7 = NflMargin::where('margin', '=', 7)->sum('occurrences'); // Now counts as wins (no push)
-        $remainingGames = $totalGames - $games6AndUnder - $gamesExactly7; // Games 8+
-        
-        // Split remaining games (games 8+) in half
-        $remainingGamesWon = $remainingGames * 0.5;
-        
-        echo "\n=== -7.5 Spread Calculation ===";
-        echo "\nStep 1 - Count games:";
-        echo "\nTotal games: " . $totalGames;
-        echo "\nGames 6 and under (clear wins): " . $games6AndUnder;
-        echo "\nGames exactly at 7 (now wins, no push): " . $gamesExactly7;
-        echo "\nRemaining games (8+): " . $remainingGames;
-        echo "\nRemaining games won (8+ split 50/50): " . $remainingGamesWon;
-        
-        // Step 2: Do the division
-        // For -7.5: (clear_wins + all_7s + remaining_won) / total
-        // Your example: (2,428 + 582 + 1,700) / 6,409 = 73.4%
-        $favoriteWins = $games6AndUnder + $gamesExactly7 + $remainingGamesWon;
-        $probability = ($favoriteWins / $totalGames) * 100;
-        
-        echo "\n\nStep 2 - Calculate probability:";
-        echo "\nFavorite wins: " . $games6AndUnder . " + " . $gamesExactly7 . " + " . $remainingGamesWon . " = " . $favoriteWins;
-        echo "\nTotal games: " . $totalGames;
-        echo "\nProbability: " . $favoriteWins . " / " . $totalGames . " = " . round($probability, 1) . "%";
-        echo "\nExpected from your example: 73.4%";
-        
-        // Test the model calculation
+        // Test -7.5 spread using normal distribution (sigma=14 for NFL)
         $spread = Spread::create([
             'game_id' => $this->game->id,
             'casino_id' => $this->casino->id,
@@ -145,11 +94,15 @@ class SpreadCoverProbabilityTest extends TestCase
         ]);
 
         $modelProbability = $spread->cover_probability;
+        
+        echo "\n=== -7.5 Spread Calculation (Normal Distribution) ===";
+        echo "\nUsing sigma=14 for NFL";
+        echo "\nZ-score: 7.5/14 = 0.536";
+        echo "\nExpected probability: ~29.6%";
         echo "\nModel calculation: " . $modelProbability . "%";
         
-        // Accept the small rounding difference (73.5% vs 73.4%)
-        $this->assertEquals(round($probability, 1), $modelProbability);
-        $this->assertEqualsWithDelta(73.4, $modelProbability, 0.2); // Within 0.2% of expected
+        // With sigma=14, -7.5 spread should give ~29.6% probability
+        $this->assertEquals(29.6, $modelProbability);
     }
 
     public function test_positive_seven_spread_probability()
@@ -166,12 +119,14 @@ class SpreadCoverProbabilityTest extends TestCase
 
         $probability = $spread->cover_probability;
 
-        echo "\n=== +7 Spread Calculation ===";
-        echo "\nFor +7 (home underdog), it should be: 100% - 70.8% = 29.2%";
+        echo "\n=== +7 Spread Calculation (Normal Distribution) ===";
+        echo "\nUsing sigma=14 for NFL";
+        echo "\nZ-score: 7/14 = 0.5";
+        echo "\nExpected probability: ~69.1%";
         echo "\nModel calculation: " . $probability . "%";
 
-        // For +7, it should be 100% - 70.8% = 29.2%
-        $this->assertEquals(29.2, $probability);
+        // With sigma=14, +7 spread should give ~69.1% probability
+        $this->assertEquals(69.1, $probability);
     }
 
     public function test_positive_seven_and_half_spread_probability()
@@ -188,28 +143,54 @@ class SpreadCoverProbabilityTest extends TestCase
 
         $probability = $spread->cover_probability;
 
-        // For +7.5, it should be 100% - 73.4% = 26.6%
-        $this->assertEquals(26.6, $probability);
+        echo "\n=== +7.5 Spread Calculation (Normal Distribution) ===";
+        echo "\nUsing sigma=14 for NFL";
+        echo "\nZ-score: 7.5/14 = 0.536";
+        echo "\nExpected probability: ~70.4%";
+        echo "\nModel calculation: " . $probability . "%";
+
+        // With sigma=14, +7.5 spread should give ~70.4% probability
+        $this->assertEquals(70.4, $probability);
     }
 
-    public function test_margin_calculations_are_correct()
+    public function test_college_football_sigma_fifteen()
     {
-        // Verify our test data setup is correct
-        $totalGames = NflMargin::sum('occurrences');
-        $this->assertEquals(6409, $totalGames);
+        // Create college football sport and game
+        $collegeSport = Sport::firstOrCreate(
+            ['key' => 'americanfootball_ncaaf'],
+            [
+                'group' => 'American Football',
+                'title' => 'NCAAF',
+                'active' => true
+            ]
+        );
 
-        // Games over 6 includes both wash (7) and clear wins (8+)
-        $gamesOver6 = NflMargin::where('margin', '>', 6)->sum('occurrences');
-        $this->assertEquals(3010, $gamesOver6); // 582 + 2428
+        $collegeGame = Game::create([
+            'sport_id' => $collegeSport->id,
+            'home_team_id' => $this->homeTeam->id,
+            'away_team_id' => $this->awayTeam->id,
+            'commence_time' => Carbon::now(),
+            'game_id' => 'test_college_game_' . uniqid(),
+        ]);
 
-        // Games over 7 are the clear wins
-        $gamesOver7 = NflMargin::where('margin', '>', 7)->sum('occurrences');
-        $this->assertEquals(2428, $gamesOver7);
+        // Test -7 spread for college football (sigma=15)
+        $spread = Spread::create([
+            'game_id' => $collegeGame->id,
+            'casino_id' => $this->casino->id,
+            'spread' => -7,
+            'home_odds' => -110,
+            'away_odds' => -110,
+            'recorded_at' => Carbon::now()
+        ]);
 
-        $washGames = NflMargin::where('margin', '=', 7)->sum('occurrences');
-        $this->assertEquals(582, $washGames);
+        $probability = $spread->cover_probability;
 
-        $gamesUnder7 = NflMargin::where('margin', '<', 7)->sum('occurrences');
-        $this->assertEquals(3399, $gamesUnder7);
+        echo "\n=== College Football -7 Spread (sigma=15) ===";
+        echo "\nZ-score: 7/15 = 0.467";
+        echo "\nModel calculation: " . $probability . "%";
+
+        // With sigma=15, should be higher probability than NFL (sigma=14)
+        $this->assertGreaterThan(30.9, $probability);
+        $this->assertLessThan(40.0, $probability);
     }
 }
