@@ -160,6 +160,50 @@ class Spread extends Model
         return round($probability, 1);
     }
 
+    public function getWinProbabilityAttribute()
+    {
+        // Calculate outright win probability from spread using normal distribution
+        // P(home wins outright) = P(home margin > 0)
+        
+        $sportKey = $this->game->sport->key;
+        $sportIdentifier = str_contains($sportKey, '_') ? explode('_', $sportKey)[1] : $sportKey;
+
+        $sigma = match (strtolower($sportIdentifier)) {
+            'nfl' => 14,
+            'ncaaf' => 15,
+            'ncaab' => 14,
+            'nba' => 14,
+            'mlb' => 14,
+            default => 14
+        };
+
+        // For outright win probability, we need P(home margin > 0)
+        // If spread is negative (home favored): P(home wins) = 1 - Φ(|spread|/σ)  
+        // If spread is positive (home underdog): P(home wins) = 1 - Φ(spread/σ)
+        
+        if ($this->spread < 0) {
+            // Home is favored by |spread| points
+            // P(home wins) = P(margin > 0) when home is expected to win by |spread|
+            // This is higher than 50% since they're favored
+            $zScore = abs($this->spread) / $sigma;
+            $homeWinProbability = (1 - $this->normalCDF($zScore)) * 100;
+        } else {
+            // Home is underdog, gets +spread points
+            // P(home wins) = P(margin > 0) when home is expected to lose by spread
+            // This is lower than 50% since they're underdogs
+            $zScore = $this->spread / $sigma;
+            $homeWinProbability = (1 - $this->normalCDF($zScore)) * 100;
+        }
+        
+        return round($homeWinProbability, 1);
+    }
+
+    public function getAwayWinProbabilityAttribute()
+    {
+        // Away win probability is complement of home win probability
+        return round(100 - $this->win_probability, 1);
+    }
+
     public function getCoverProbabilityWithJuiceAttribute()
     {
         // Start with the fair probability from normal distribution
